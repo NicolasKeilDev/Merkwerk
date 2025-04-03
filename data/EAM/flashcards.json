@@ -1,0 +1,374 @@
+[
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Warum ist Enterprise Architecture Management notwendig?",
+    "answer": [
+      "Zunehmende Komplexität von Unternehmensstrukturen",
+      "Heterogenität der Geschäftlandschaft",
+      "Heterogenität der IT-Landschaft",
+      "Dynamische Regulierung",
+      "Wettbewerbsdruck",
+      "Neue Technologien",
+      "Komplexe Altsysteme"
+    ],
+    "page": 2,
+    "images": [
+      {
+        "page": 2,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_2.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist Enterprise Architecture Management und welche Fragen sollte ein CIO kennen, wenn er in einem großen Unternehmen arbeitet?",
+    "answer": [
+      "Enterprise Architecture Management (EAM) hilft, alle IT-Systeme und Anwendungen in einem Unternehmen zu überblicken und zu steuern.",
+      "Es sorgt dafür, dass Kunden eine nahtlose Customer Experience haben, also ein einheitliches und reibungsloses Erlebnis erhalten.",
+      "Das Unternehmen muss in der Lage sein, schnell auf sich ändernde Marktanforderungen zu reagieren, um wettbewerbsfähig zu bleiben.",
+      "Die Kosten der IT-Services werden analysiert, um wirtschaftlich zu arbeiten.",
+      "Alle Systeme und Prozesse müssen rechts- und revisionssicher sein, das heißt, sie müssen alle gesetzlichen und internen Regeln erfüllen.",
+      "Die IT-Systeme sollen sicher gegen Angriffe von außen sein, um Daten und Prozesse zu schützen.",
+      "CIO steht für Chief Information Officer, also den IT-Leiter, der die IT-Strategie im Unternehmen bestimmt."
+    ],
+    "page": 3
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Probleme und Herausforderungen bestehen in vielen Unternehmen im Zusammenhang mit Enterprise Architecture Management?",
+    "answer": [
+      "Viele Unternehmen haben verschiedene Bereiche wie Vertrieb, Produktion und Kundensupport, die eigene Ziele, Abläufe und Tools haben.",
+      "Die unterschiedlichen Arbeitsweisen in den Bereichen führen zu Schwierigkeiten in der Zusammenarbeit.",
+      "Es gibt Probleme, wenn es um Abstimmung und Kommunikation zwischen den Bereichen geht, zum Beispiel bei der Einhaltung von Lieferzeiten.",
+      "Enterprise Architecture Management (EAM) bedeutet, dass ein Unternehmen seine IT-Systeme und Geschäftsprozesse zusammen betrachtet und steuert, um besser zusammenzuarbeiten."
+    ],
+    "page": 4
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Probleme resultieren daraus, dass Enterprise Architecture Management eingesetzt wird, aber die bestehenden Herausforderungen unverändert bleiben?",
+    "answer": [
+      "Obwohl viele Unternehmen Enterprise Architecture Management nutzen, bleiben die alten Probleme bestehen.",
+      "Es gibt eine Lücke zwischen der aktuellen Unternehmenssituation (Realität) und den erwarteten Anforderungen.",
+      "Enterprise Architecture Management ist ein Ansatz, der hilft, die Strukturen und Prozesse eines Unternehmens zu organisieren. Das ändert aber nicht automatisch die bestehenden Probleme.",
+      "Unternehmen müssen also zusätzlich Wege finden, diese Herausforderungen zu lösen."
+    ],
+    "page": 5,
+    "priority": 2
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Schritte und Zusammenhänge gibt es zwischen Geschäftsprozessen, IT-Management und Enterprise Architecture Management (EAM)?",
+    "answer": [
+      "Unternehmen haben Geschäftsprozesse, also Abläufe, wie Aufgaben im Unternehmen erledigt werden.",
+      "Diese Geschäftsprozesse werden durch Informationssysteme digitalisiert. 'Digitalisierung' bedeutet, dass analoge Abläufe in die digitale Welt übertragen werden.",
+      "IT-Management sorgt dafür, dass alle IT-Systeme gut zusammenarbeiten. Es entwickelt eine konsistente IT-Strategie, also einen Plan für den Einsatz von IT im Unternehmen.",
+      "Enterprise Architecture Management (EAM) stellt das Business-IT-Alignment sicher. Das heißt, es sorgt dafür, dass die IT die Geschäftsprozesse und -ziele optimal unterstützt."
+    ],
+    "page": 6
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Wie hat sich das Enterprise Architecture Management (EAM) im Zeitverlauf entwickelt?",
+    "answer": [
+      "EAM begann als Information Systems Engineering.",
+      "Entwicklung zu EAM as Advanced IS Management.",
+      "Weiterentwicklung zu EAM for Strategic Business Management.",
+      "Entwicklung über einen Zeitraum von 25 Jahren."
+    ],
+    "page": 7,
+    "images": [
+      {
+        "page": 7,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_7.png"
+      }
+    ],
+    "priority": 3
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist Enterprise Architecture Management (EAM) und welche praktischen Fragen werden dabei behandelt?",
+    "answer": [
+      "EAM hilft, die Struktur und Organisation eines Unternehmens zu verbessern.",
+      "Es wird gefragt, wie Synergien zwischen verschiedenen Marken maximiert werden können. (Synergien sind Vorteile, die durch Zusammenarbeit entstehen.)",
+      "Es wird untersucht, wie die Entscheidungsfindung im C-Level verbessert werden kann. (C-Level bezieht sich auf die oberste Führungsebene im Unternehmen.)",
+      "Es geht darum, wie weltweit über 1.000 IT-Systeme konsolidiert werden können. (IT-Systeme sind die technischen Anwendungen und Computerprogramme des Unternehmens.)"
+    ],
+    "page": 8
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Wie wird Enterprise Architecture Management häufig veranschaulicht und was sind die Unterschiede zwischen gesteuertem und organischem Wachstum?",
+    "answer": [
+      "Enterprise Architecture Management wird oft mit Stadtplanung verglichen.",
+      "Unterschiede sind aus der Vogelperspektive erkennbar.",
+      "Gesteuertes Wachstum zeigt eine geplante Struktur.",
+      "Organisches Wachstum zeigt eine ungeplante, organisch entstandene Struktur."
+    ],
+    "page": 9,
+    "images": [
+      {
+        "page": 9,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_9.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was sind die Ziele des Enterprise Architecture Management im Vergleich zur Stadtplanung?",
+    "answer": [
+      "Effektivität: Geschäftsanforderungen adressieren.",
+      "Effizienz: Effiziente Prozesse und Abläufe ermöglichen.",
+      "Wirtschaftlichkeit: Unternehmensbudgets einhalten.",
+      "Flexibilität: Anpassbarkeit für Strategie der Zukunft sicherstellen.",
+      "Sicherheit: Sichere Prozesse und Abläufe gewährleisten.",
+      "Nachhaltigkeit: Interne und externe Standards und Regeln einhalten.",
+      "Skalierbarkeit: Wachstum sollte einfach möglich sein.",
+      "Qualität: Hohe Jobqualität und Motivation etablieren.",
+      "Vermögen: Umsatz und Gewinn sichern."
+    ],
+    "page": 10,
+    "images": [
+      {
+        "page": 10,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_10.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was beschreibt das Enterprise Architecture Management und worauf liegt der Fokus?",
+    "answer": [
+      "Planung, Gestaltung, Lenkung und Kontrolle von Unternehmensarchitekturen",
+      "Fokus auf digitales Ökosystem eines Unternehmens",
+      "Unterscheidung zwischen analogen und digitalen Prozessen",
+      "Geschäftsarchitektur für analoge und IT-gestützte Prozesse",
+      "Produktionsfaktoren: Menschen, Maschinen und digitale Anwendungen",
+      "Input und Output: Produkte, Services, Daten und Informationen"
+    ],
+    "page": 11,
+    "images": [
+      {
+        "page": 11,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_11.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist Enterprise Architecture Management und welche Bestandteile umfasst es?",
+    "answer": [
+      "Enterprise Architecture Management (EAM) ist der Prozess, mit dem Unternehmensarchitekturen erstellt, dokumentiert, analysiert, erweitert und weiterentwickelt werden.",
+      "Unternehmensarchitekturen beinhalten alle wichtigen Elemente des Unternehmens, wie z.B. Geschäftsaktivitäten, Daten, Anwendungen und Technologien.",
+      "Geschäftsaktivitäten sind die Tätigkeiten, die ein Unternehmen ausführt, um seine Ziele zu erreichen.",
+      "Daten sind Informationen, die gesammelt, organisiert und bereitgestellt werden, um Entscheidungen zu unterstützen.",
+      "Anwendungen sind Programme oder Software, die den Betrieb von Geschäftsprozessen ermöglichen.",
+      "Technologien umfassen die IT-Infrastruktur, die benötigt wird, um Geschäftsprozesse und Anwendungen zu betreiben.",
+      "Die Vision und Strategie des Unternehmens sind zentrale Treiber und Unterstützer im EAM-Prozess."
+    ],
+    "page": 12
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist der Prozess des Enterprise Architecture Managements?",
+    "answer": [
+      "Kontinuierlicher Übergang vom Ist-Zustand zum Soll-Zustand",
+      "Fokus auf Strategie, Prozesse, Applikationen und Infrastruktur",
+      "Modellierung des Ist-Zustands",
+      "Entwicklung der Enterprise Architecture",
+      "Realisierung des Soll-Zustands"
+    ],
+    "page": 13,
+    "images": [
+      {
+        "page": 13,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_13.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist Enterprise Architecture Management und wie unterscheidet es sich von Enterprise Architectures?",
+    "answer": [
+      "Enterprise Architecture Management (EAM) plant, gestaltet und kontrolliert das digitale Ökosystem eines Unternehmens.",
+      "Enterprise Architectures beschreiben die grundlegende Struktur des gesamten digitalen Systems eines Unternehmens.",
+      "Das digitale Ökosystem umfasst alle digitalen Elemente und deren Beziehungen im Unternehmen.",
+      "EAM sorgt dafür, dass das bestehende digitale System effizient genutzt und weiterentwickelt wird."
+    ],
+    "page": 14
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist das Hauptziel des Enterprise Architecture Managements?",
+    "answer": [
+      "Adressierung der Komplexität in Unternehmen",
+      "Komplexität senkt die Agilität von Unternehmen",
+      "Erhöhte Kosten durch Komplexität",
+      "Langfristig negative Auswirkungen auf die Wettbewerbsfähigkeit",
+      "Grafik zeigt Anstieg der Komplexität bei organischem Wachstum",
+      "Grafik zeigt Anstieg der Komplexität bei kontrollierter Entwicklung"
+    ],
+    "page": 15,
+    "images": [
+      {
+        "page": 15,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_15.png"
+      }
+    ],
+    "priority": 2
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was ist Enterprise Architecture Management (EAM) und welche Ziele verfolgt es laut dem Text?",
+    "answer": [
+      "EAM steuert die Entwicklung der Organisation, damit die Geschäftsstrategie und Ziele erreicht werden.",
+      "Es schafft Transparenz, indem alle Architekturkomponenten und deren Beziehungen dokumentiert werden. (Transparenz heißt, dass alles klar und sichtbar ist.)",
+      "Es werden auch Informationen zu Kosten, Sicherheit und Compliance integriert. (Compliance bedeutet, dass Gesetze und Regeln eingehalten werden.)",
+      "Dank der Übersicht kann ein Zielbild der Organisation erstellt und mit allen relevanten Gruppen abgestimmt werden.",
+      "Richtlinien und Regeln führen zu einer Standardisierung, was die Modularisierung (Aufteilung in wiederverwendbare Bausteine), Skalierbarkeit und Flexibilität erhöht und somit die Kosten senkt."
+    ],
+    "page": 16
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Ergebnisse werden durch den Einsatz von Enterprise Architecture Management erzielt?",
+    "answer": [
+      "Erhöhung der Transparenz",
+      "Klare Vision",
+      "Etablierung von Prinzipien und Standards",
+      "Optimale Ressourcenallokation",
+      "Ausnutzung von Synergieeffekten",
+      "Bessere Koordination",
+      "Geringere Komplexität",
+      "Geringere Kosten",
+      "Bessere Zielerreichung",
+      "Höhere Flexibilität",
+      "Höhere Leistungsfähigkeit"
+    ],
+    "page": 17,
+    "images": [
+      {
+        "page": 17,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_17.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Ziele verfolgt das Enterprise Architecture Management (EAM) und welche Unterschiede gibt es zwischen IT-Systemen mit und ohne EAM?",
+    "answer": [
+      "EAM hilft Unternehmen, moderne Herausforderungen zu meistern und zukunftssicher zu werden.",
+      "Ohne EAM gibt es viele verschiedene individuelle Anwendungen, die oft doppelt vorhanden (redundant) sind.",
+      "Mit EAM werden Anwendungen standardisiert, also es gibt nur wenige, einheitliche Anwendungen.",
+      "Ohne EAM existieren Daten oft mehrfach und in schlechter Qualität.",
+      "Mit EAM werden Daten eindeutig zugeordnet und verteilt, was zu höherer Datenqualität führt."
+    ],
+    "page": 18
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Herausforderungen entstehen bei einer hohen Anzahl von Individualanwendungen für Unternehmen?",
+    "answer": [
+      "Individualanwendungen sind speziell entwickelte Softwarelösungen, die nicht standardisiert sind.",
+      "Viele unterschiedliche Anwendungen führen zu Problemen bei der Verbindung und Zusammenarbeit der Systeme.",
+      "Die Wartung und Aktualisierung dieser Anwendungen wird aufwändiger und teurer.",
+      "Die Übersicht und Steuerung der gesamten Unternehmensarchitektur wird komplexer."
+    ],
+    "page": 19
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was sind die Ziele und die positiven Auswirkungen von Enterprise Architecture Management (EAM) auf ein Unternehmen?",
+    "answer": [
+      "EAM sorgt dafür, dass alle Geschäftseinheiten standardisierte Anwendungen nutzen, anstatt viele verschiedene Systeme zu verwenden.",
+      "Mit EAM werden IT-Systeme in klare Hierarchien und Module unterteilt, was die Komplexität reduziert und die Verwaltung erleichtert.",
+      "Geschäftsanwendungen wie CRM-Systeme (Customer Relationship Management, also Systeme zur Verwaltung von Kundendaten) werden zentral gesteuert, sodass weniger Redundanz und Verwirrung entsteht.",
+      "Datenverantwortlichkeiten werden eindeutig zugeordnet, indem es klare Datenquellen gibt. Das bedeutet 'Single Sources of Truth', also eine einzige, zuverlässige Quelle für die Daten, wodurch Informationen leicht zusammengeführt werden können."
+    ],
+    "page": 20
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche positiven Effekte hat Enterprise Architecture Management (EAM) im Vergleich zu einem Laissez-Faire-Ansatz in den Bereichen Systemintegration, Infrastruktur sowie Entwicklung und Beschaffung?",
+    "answer": [
+      "Systemintegration: Im Laissez-Faire-Ansatz gibt es viele einzelne, nicht abgestimmte Lösungen mit verschiedenen Nachrichtenformaten. EAM sorgt für einheitliche technische Standards und klare Geschäftsbegriffe. (Erklärung: Systemintegration meint die Verbindung und Abstimmung verschiedener Computersysteme.)",
+      "Infrastruktur: Ohne EAM gibt es oft zu viele unterschiedliche IT-Infrastrukturelemente, was zu hohen Kosten und großer Komplexität führt. Mit EAM werden nur wenige, standardisierte Systeme eingesetzt, was die Verwaltung vereinfacht. (Erklärung: Infrastruktur umfasst die IT-Grundlagen wie Server, Datenbanken und Netzwerke.)",
+      "Entwicklung und Beschaffung: Ein langer Hand- und Fußlauf entsteht, wenn viele verschiedene Technologien und Prozesse genutzt werden. EAM setzt auf wenige, standardisierte Entwicklungs- und Beschaffungsstandards, was die Umsetzung erleichtert. (Erklärung: Technologie-Stacks sind die Kombination verschiedener Technologien, die zusammen in einem System genutzt werden.)"
+    ],
+    "page": 21
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was sind die Ziele des Enterprise Architecture Managements?",
+    "answer": [
+      "Reduzierung der Komplexität in IT-Lösungen",
+      "Vermeidung von Kostensteigerungen ohne aktives Management",
+      "Optimierung der Investitionen und Innovationen",
+      "Einhaltung des gesamten IT-Budgets",
+      "Langfristige Kostenreduktion durch aktives Management"
+    ],
+    "page": 22,
+    "images": [
+      {
+        "page": 22,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_22.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was bedeutet Enterprise Architecture Management und wie hängt es mit der Digitalisierung zusammen?",
+    "answer": [
+      "Enterprise Architecture Management verbindet die strategische Planung mit der praktischen Umsetzung in einem Unternehmen.",
+      "Es umfasst verschiedene Bereiche wie Geschäftsarchitektur (wie ein Unternehmen organisiert ist), Anwendungsarchitektur (welche Software eingesetzt wird), Datenarchitektur (wie Daten strukturiert sind) und Technologiearchitektur (welche technischen Systeme genutzt werden).",
+      "Die Digitalisierung ist eng mit Enterprise Architecture Management verknüpft, da beide Konzepte zusammen die digitale Transformation eines Unternehmens unterstützen.",
+      "Ein digitales Ökosystem bezeichnet die vernetzte Umgebung von digitalen Prozessen und Anwendungen.",
+      "Business-IT-Alignment beschreibt die Abstimmung zwischen der Geschäftsstrategie und der Informationstechnologie, um gemeinsame Ziele zu erreichen.",
+      "Begriffe wie Geschäftsmodelldigitalisierung und Prozessdigitalisierung erklären, wie traditionelle Geschäftsmodelle und Geschäftsprozesse durch den Einsatz digitaler Technologien verändert werden."
+    ],
+    "page": 23
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche Aufgaben hat ein Enterprise Architect, um eine digitale Transformation im Unternehmen erfolgreich umzusetzen?",
+    "answer": [
+      "Verstehen des Geschäftsmodells: Das bedeutet, wie das Unternehmen Geld verdient und funktioniert.",
+      "Erkennen von Potenzialen neuer Technologien: Hier geht es darum, neue digitale Möglichkeiten zu entdecken und zu nutzen.",
+      "Schaffen von Standards und Zielbildern: Das sind klare Regeln und Vorstellungen, die helfen, das Unternehmen effizient und flexibel zu machen.",
+      "Frühzeitiges Erkennen von Automatisierungspotenzialen: Damit wird geprüft, wo Prozesse durch Technik vereinfacht werden können.",
+      "Aufbau einer digitalen Datenplattform: Diese Grundlage bereitet den Einsatz von künstlicher Intelligenz (Computer, die wie Menschen denken) vor.",
+      "Konzeption einer anpassungsfähigen Infrastruktur: Es wird eine Technik-Umgebung geplant, die schnelle Änderungen erlaubt und einfach zu verwalten ist."
+    ],
+    "page": 24
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Welche sieben Bausteine sind für die Konzeption und Implementierung von Enterprise-Architecture-Management-Initiativen wesentlich?",
+    "answer": [
+      "Governance und Organisation",
+      "Strategische Planung",
+      "Projektmanagement",
+      "Betrieb und Monitoring",
+      "Erstellung von Enterprise Architekturen",
+      "Einführung und Adoption"
+    ],
+    "page": 25,
+    "images": [
+      {
+        "page": 25,
+        "path": "data\\EAM\\images\\01_Einführung ins Enterprise Architecture Management_page_25.png"
+      }
+    ]
+  },
+  {
+    "upload": "01_Einführung ins Enterprise Architecture Management.pdf",
+    "question": "Was wurde auf Seite 28 im Vortrag über Enterprise Architecture Management von Prof. Dr. Marcus Fischer erklärt?",
+    "answer": [
+      "Der Vortrag endet mit einem Dankeschön: 'Danke für Ihre Aufmerksamkeit!'.",
+      "Es wurde das Thema Enterprise Architecture Management vorgestellt, was die Verwaltung und Steuerung aller IT- und Geschäftsprozesse in einem Unternehmen bedeutet. Einfach gesagt: Man sorgt dafür, dass alle Teile des Unternehmens gut zusammenarbeiten.",
+      "Der Begriff 'Einführung & Einordnung' zeigt, dass Grundlagen und die Zuordnung des Themas in den Gesamtzusammenhang erklärt werden.",
+      "Der Vortrag wurde von Prof. Dr. Marcus Fischer durchgeführt."
+    ],
+    "page": 28
+  }
+]
