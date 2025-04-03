@@ -1,2 +1,4 @@
 supabase
 PyMuPDF
+openai
+python-dotenv
