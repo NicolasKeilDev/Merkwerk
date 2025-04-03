@@ -1,12 +1,11 @@
 # backend/gpt_interface.py
 
-import os
 import json
+import streamlit as st
 from openai import OpenAI
-from dotenv import load_dotenv
 
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize the OpenAI client with the API key from st.secrets
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 def generate_card_from_text(text, upload_name, page_number):
     prompt = f"""
