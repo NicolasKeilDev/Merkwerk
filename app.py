@@ -242,9 +242,8 @@ if view_mode == "Creator Studio":
         # Display Fach Contents (PDFs)
         st.markdown("#### Hochgeladene PDFs")
 
-        uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/")
-
-        uploaded_files = [file["name"] for file in uploaded_files_resp]
+        uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
+        uploaded_files = [file["name"] for file in uploaded_files_resp if file["name"] != "placeholder.txt"]
 
         if uploaded_files:
             col1, col2 = st.columns([0.8, 0.2])
@@ -259,7 +258,7 @@ if view_mode == "Creator Studio":
             # If user selected an existing file, set it as the current file
             if selected_existing_file:
                 st.session_state.uploaded_pdf = selected_existing_file
-                st.session_state.selected_file_path = f"supabase://uploads/{selected_fach}/{selected_existing_file}"
+                st.session_state.selected_file_path = f"supabase://{bucket_name}/{selected_fach}/uploads/{selected_existing_file}"
                 st.rerun()  # Rerun to update the interface
             
             # Display the list of uploaded files
@@ -271,6 +270,7 @@ if view_mode == "Creator Studio":
                     st.rerun()
         else:
             st.info("Noch keine PDFs hochgeladen.")
+
 
             
         
