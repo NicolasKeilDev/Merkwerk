@@ -312,12 +312,13 @@ if view_mode == "Creator Studio":
                 file_name = st.session_state.uploaded_pdf
                 upload_file_path = st.session_state.selected_file_path
             
+            
             # ------------------------------
             # PDF Preview without local file saving:
             # ------------------------------
             st.subheader("PDF Vorschau")
 
-            # List files in the uploads folder for the selected fach
+            # List files in the uploads folder for the selected Fach
             uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
 
             # Filter out any placeholder or unwanted files
@@ -325,16 +326,16 @@ if view_mode == "Creator Studio":
 
             if files:
                 # Sort files by creation date descending (newest first)
-                # Adjust the key below if your metadata field is named differently
                 newest_file = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)[0]
                 newest_file_name = newest_file["name"]
 
                 try:
                     # Download the newest file directly from Supabase storage.
-                    # If the download() method returns a response object, use .content to get the bytes.
                     download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
-                    pdf_bytes = download_response.content  # Use .content if necessary
                     
+                    # Check if the response is already bytes
+                    pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
+
                     # Convert the file bytes to a base64 string
                     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                     
@@ -347,6 +348,7 @@ if view_mode == "Creator Studio":
                     st.error(f"Fehler beim Anzeigen der PDF-Vorschau: {str(e)}")
             else:
                 st.info("Noch keine PDFs hochgeladen.")
+
 
 
 
