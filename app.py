@@ -317,11 +317,13 @@ if view_mode == "Creator Studio":
             # ------------------------------
             st.subheader("PDF Vorschau")
             # Get the public URL of the uploaded PDF from Supabase.
-            pdf_url = supabase.storage.from_(bucket_name).get_public_url(f"{selected_fach}/uploads/{file_name}")
+            signed_url_resp = supabase.storage.from_(bucket_name).create_signed_url(f"{selected_fach}/uploads/{file_name}", 3600)
+            pdf_url = signed_url_resp.get("signedURL")
             pdf_display = f"""
             <iframe src="{pdf_url}" width="100%" height="800" type="application/pdf"></iframe>
             """
             st.markdown(pdf_display, unsafe_allow_html=True)
+
 
 
             
