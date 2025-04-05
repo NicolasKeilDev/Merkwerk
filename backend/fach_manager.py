@@ -12,10 +12,10 @@ bucket_name = st.secrets["supabase"]["bucket"]
 supabase = create_client(url, key)
 
 
-# --- List all "Fächer" (folders) ---
 def get_all_faecher():
     """
-    Returns a sorted list of fach names by listing top-level folders in the bucket.
+    Returns a sorted list of fach names by listing top-level folders in the bucket,
+    excluding any folders that are just placeholders (like .emptyFolderPlaceholder).
     """
     try:
         files = supabase.storage.from_(bucket_name).list()
@@ -25,28 +25,22 @@ def get_all_faecher():
     faecher = set()
     for file in files:
         parts = file["name"].split("/")
-        if parts:
+        if parts and not parts[0].startswith("."):
             faecher.add(parts[0])
     return sorted(list(faecher))
+
 
 # --- Create a new fach folder structure ---
 def create_fach(name):
     """
-    Creates a new fach folder with subfolders and a flashcard.js file.
+    Creates a new fach folder by ensuring a flashcard.js file exists.
     """
-    # Create subfolders: uploads, images, mindmaps by uploading a placeholder file
-    for subfolder in ["uploads", "images", "mindmaps"]:
-        placeholder_path = f"{name}/{subfolder}/placeholder.txt"
-        try:
-            supabase.storage.from_(bucket_name).upload(placeholder_path, "".encode("utf-8"))
-        except Exception:
-            pass  # Ignore if the placeholder already exists
-
-    # Create flashcard.js file if it doesn't exist
     flashcard_path = f"{name}/flashcard.js"
     try:
+        # Check if flashcard.js exists by attempting to download it.
         supabase.storage.from_(bucket_name).download(flashcard_path)
     except Exception:
+        # If not found, create flashcard.js with empty JSON array content.
         try:
             supabase.storage.from_(bucket_name).upload(flashcard_path, "[]".encode("utf-8"))
         except Exception as e2:

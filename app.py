@@ -303,7 +303,7 @@ if view_mode == "Creator Studio":
                 if uploaded_pdf is not None:
                     file_name = uploaded_pdf.name
                     # Upload the PDF directly to Supabase storage.
-                    supabase.storage.from_("uploads").upload(f"{selected_fach}/{file_name}", uploaded_pdf.getbuffer())
+                    supabase.storage.from_("uploads").upload(f"{selected_fach}/{file_name}", bytes(uploaded_pdf.getbuffer()))
                     st.success(f"Datei '{file_name}' wurde in Supabase gespeichert im Fach '{selected_fach}'")
                     st.session_state.uploaded_pdf = file_name
                     # Store a reference or URL to the file as needed.
