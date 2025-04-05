@@ -16,8 +16,14 @@ from backend.gpt_interface import generate_card_from_text, generate_mindmap_from
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
 from backend.mindmap_manager import get_mindmap_html, save_mindmap_html, list_mindmaps
 
-# Create necessary directories if they don't exist
-Path("data").mkdir(exist_ok=True)
+from supabase import create_client
+
+# --- Setup Supabase client using secrets ---
+url = st.secrets["supabase"]["url"]
+key = st.secrets["supabase"]["key"]
+bucket_name = st.secrets["supabase"]["bucket"]
+supabase = create_client(url, key)
+
 
 st.set_page_config(page_title="Merkwerk", layout="wide")
 # Custom CSS to increase the default font size and button height
@@ -294,25 +300,16 @@ if view_mode == "Creator Studio":
                 upload_file_path = upload_path / uploaded_pdf.name
                 file_name = uploaded_pdf.name
                 
-                # Save the uploaded PDF if it's not already in our tracker
-                if file_name not in st.session_state.uploaded_files_tracker:
-                    # Make sure uploads directory exists
-                    if not upload_path.exists():
-                        upload_path.mkdir(parents=True, exist_ok=True)
-                    
-                    # Save the file
-                    with open(upload_file_path, "wb") as f:
-                        f.write(uploaded_pdf.getbuffer())
-                    st.success(f"Datei '{file_name}' wurde gespeichert im Fach '{selected_fach}'")
-                    # Add to our tracker to prevent duplicate saves
-                    st.session_state.uploaded_files_tracker.append(file_name)
-                    
-                    # Update session state
+                if uploaded_pdf is not None:
+                    file_name = uploaded_pdf.name
+                    # Upload the PDF directly to Supabase storage.
+                    supabase.storage.from_("uploads").upload(f"{selected_fach}/{file_name}", uploaded_pdf.getbuffer())
+                    st.success(f"Datei '{file_name}' wurde in Supabase gespeichert im Fach '{selected_fach}'")
                     st.session_state.uploaded_pdf = file_name
-                    st.session_state.selected_file_path = upload_file_path
-                    
-                    # Refresh the list of files displayed
+                    # Store a reference or URL to the file as needed.
+                    st.session_state.selected_file_path = f"supabase://uploads/{selected_fach}/{file_name}"  # Example reference
                     st.rerun()
+
             else:
                 # Selected existing file case
                 file_name = st.session_state.uploaded_pdf
