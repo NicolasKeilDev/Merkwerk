@@ -35,7 +35,7 @@ def create_fach(name):
     """
     Creates a new fach folder by ensuring a flashcard.js file exists.
     """
-    flashcard_path = f"{name}/flashcard.js"
+    flashcard_path = f"{name}/flashcard.json"
     try:
         # Check if flashcard.js exists by attempting to download it.
         supabase.storage.from_(bucket_name).download(flashcard_path)
