@@ -337,7 +337,11 @@ if view_mode == "Creator Studio":
                     download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
                     pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
 
-                    # Use the bytes to open the PDF with PyMuPDF
+                    # Download the newest file bytes from Supabase
+                    download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
+                    pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
+
+                    # Open the PDF from the downloaded bytes
                     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                     page_count = doc.page_count
 
