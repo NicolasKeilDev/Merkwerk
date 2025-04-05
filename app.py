@@ -371,9 +371,28 @@ if view_mode == "Creator Studio":
             if 'image_recognition_pages' not in st.session_state:
                 st.session_state.image_recognition_pages = {}
 
-            # Get page count
-            doc = fitz.open(upload_file_path)
+            # Re-download PDF bytes for processing instead of using a local file path:
+            if "uploaded_pdf" in st.session_state:
+                file_name = st.session_state.uploaded_pdf
+            else:
+                # Fallback: List files and choose the newest file
+                uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
+                files = [f for f in uploaded_files_resp if f["name"] != "placeholder.txt"]
+                if files:
+                    newest_file = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)[0]
+                    file_name = newest_file["name"]
+                else:
+                    st.error("No PDF available for processing.")
+                    st.stop()
+
+            # Download the PDF bytes from Supabase
+            download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{file_name}")
+            pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
+
+            # Open the PDF from the in-memory bytes
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             page_count = doc.page_count
+
 
             # Store excluded pages in session state if not already there
             if 'excluded_pages' not in st.session_state:
