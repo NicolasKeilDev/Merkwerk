@@ -312,9 +312,12 @@ if view_mode == "Creator Studio":
                 file_name = st.session_state.uploaded_pdf
                 upload_file_path = st.session_state.selected_file_path
             
-            
             # ------------------------------
             # PDF Preview without local file saving:
+            # ------------------------------
+            # ------------------------------
+            # ------------------------------
+            # PDF Preview and Processing without Local File Saving:
             # ------------------------------
             st.subheader("PDF Vorschau")
 
@@ -332,14 +335,14 @@ if view_mode == "Creator Studio":
                 try:
                     # Download the newest file directly from Supabase storage.
                     download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
-                    
-                    # Check if the response is already bytes
                     pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
 
-                    # Convert the file bytes to a base64 string
+                    # Use the bytes to open the PDF with PyMuPDF
+                    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                    page_count = doc.page_count
+
+                    # Convert the file bytes to a base64 string for embedding
                     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-                    
-                    # Embed the PDF using a data URI in an iframe
                     pdf_display = f"""
                     <iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>
                     """
@@ -353,7 +356,8 @@ if view_mode == "Creator Studio":
 
 
 
-            
+
+                
             # ------------------------------
             # Flashcard creation section
             # ------------------------------
