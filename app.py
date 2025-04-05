@@ -242,7 +242,8 @@ if view_mode == "Creator Studio":
         # Display Fach Contents (PDFs)
         st.markdown("#### Hochgeladene PDFs")
 
-        uploaded_files_resp = supabase.storage.from_("uploads").list(f"{selected_fach}/")
+        uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/")
+
         uploaded_files = [file["name"] for file in uploaded_files_resp]
 
         if uploaded_files:
@@ -298,11 +299,13 @@ if view_mode == "Creator Studio":
                 if uploaded_pdf is not None:
                     file_name = uploaded_pdf.name
                     # Upload the PDF directly to Supabase storage.
-                    supabase.storage.from_("uploads").upload(f"{selected_fach}/{file_name}", bytes(uploaded_pdf.getbuffer()))
+                    supabase.storage.from_(bucket_name).upload(f"{selected_fach}/{file_name}", bytes(uploaded_pdf.getbuffer()))
+
                     st.success(f"Datei '{file_name}' wurde in Supabase gespeichert im Fach '{selected_fach}'")
                     st.session_state.uploaded_pdf = file_name
                     # Store a reference or URL to the file as needed.
-                    st.session_state.selected_file_path = f"supabase://uploads/{selected_fach}/{file_name}"  # Example reference
+                    st.session_state.selected_file_path = f"supabase://{bucket_name}/{selected_fach}/{file_name}"
+
                     st.rerun()
 
             else:
