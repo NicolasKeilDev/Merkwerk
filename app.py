@@ -1,4 +1,4 @@
-# main.py
+# app.py
 
 import streamlit as st
 from pathlib import Path
@@ -241,42 +241,37 @@ if view_mode == "Creator Studio":
         st.markdown("<br>", unsafe_allow_html=True)  # Add vertical spacing
         # Display Fach Contents (PDFs)
         st.markdown("#### Hochgeladene PDFs")
-        fach_path = Path("data") / selected_fach
-        uploads_dir = fach_path / "uploads"
 
-        # List uploaded PDFs with delete option per document
-        if uploads_dir.exists():
-            uploaded_files = [f.name for f in uploads_dir.iterdir() if f.is_file()]
-            if uploaded_files:
+        uploaded_files_resp = supabase.storage.from_("uploads").list(f"{selected_fach}/")
+        uploaded_files = [file["name"] for file in uploaded_files_resp]
+
+        if uploaded_files:
+            col1, col2 = st.columns([0.8, 0.2])
+            
+            # Add a selectbox to choose an already uploaded file
+            selected_existing_file = st.selectbox(
+                "Bereits hochgeladene PDF auswählen:",
+                options=[""] + uploaded_files,
+                index=0
+            )
+            
+            # If user selected an existing file, set it as the current file
+            if selected_existing_file:
+                st.session_state.uploaded_pdf = selected_existing_file
+                st.session_state.selected_file_path = f"supabase://uploads/{selected_fach}/{selected_existing_file}"
+                st.rerun()  # Rerun to update the interface
+            
+            # Display the list of uploaded files
+            for f in uploaded_files:
                 col1, col2 = st.columns([0.8, 0.2])
-                
-                # Add a selectbox to choose an already uploaded file
-                selected_existing_file = st.selectbox(
-                    "Bereits hochgeladene PDF auswählen:",
-                    options=[""] + uploaded_files,  # Empty option for "none selected"
-                    index=0
-                )
-                
-                # If user selected an existing file, set it as the current file
-                if selected_existing_file:
-                    selected_file_path = uploads_dir / selected_existing_file
-                    # Create a BytesIO object to simulate a file upload
-                    if 'uploaded_pdf' not in st.session_state or st.session_state.uploaded_pdf != selected_existing_file:
-                        st.session_state.uploaded_pdf = selected_existing_file
-                        st.session_state.selected_file_path = selected_file_path
-                        st.rerun()  # Rerun to update the interface
-                
-                # Display the list of uploaded files
-                for f in uploaded_files:
-                    col1, col2 = st.columns([0.8, 0.2])
-                    col1.markdown(f"- {f}")
-                    if col2.button("Dokument löschen", key=f"del_{f}", type="tertiary"):
-                        delete_document(selected_fach, f)
-                        st.rerun()
-            else:
-                st.info("Noch keine PDFs hochgeladen.")
+                col1.markdown(f"- {f}")
+                if col2.button("Dokument löschen", key=f"del_{f}", type="tertiary"):
+                    delete_document(selected_fach, f)
+                    st.rerun()
         else:
             st.info("Noch keine PDFs hochgeladen.")
+
+            
         
         # PDF Upload for the selected Fach
         # Initialize a session state variable to track uploaded files
