@@ -319,11 +319,13 @@ if view_mode == "Creator Studio":
             # PDF Preview
             # ------------------------------
             st.subheader("PDF Vorschau")
+            # Get the public URL of the uploaded PDF from Supabase.
+            pdf_url = supabase.storage.from_("uploads").get_public_url(f"{selected_fach}/{file_name}")
             pdf_display = f"""
-            <iframe src="data:application/pdf;base64,{base64.b64encode(open(upload_file_path, "rb").read()).decode('utf-8')}" 
-                    width="100%" height="800" type="application/pdf"></iframe>
+            <iframe src="{pdf_url}" width="100%" height="800" type="application/pdf"></iframe>
             """
             st.markdown(pdf_display, unsafe_allow_html=True)
+
             
             # ------------------------------
             # Flashcard creation section
@@ -389,16 +391,17 @@ if view_mode == "Creator Studio":
                         try:
                             if page_num_human in image_pages:
                                 
-                                # First save the page as an image
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 image_path = f"{file_name.split('.')[0]}_page_{page_num_human}.png"
-                                image_dir = Path("data") / selected_fach / "images"
-                                save_path = image_dir / image_path
-                                pix.save(save_path)
-                                
-                                # Now analyze the image using GPT-4 Vision
+                                # Upload the image to Supabase storage
+                                supabase.storage.from_("images").upload(f"{selected_fach}/{image_path}", pix.tobytes())
+
+                                # Retrieve the public URL of the uploaded image
+                                image_public_url = supabase.storage.from_("images").get_public_url(f"{selected_fach}/{image_path}")
+
+                                # Now analyze the image using GPT-4 Vision using the public URL
                                 gpt_output = analyze_image_for_flashcard(
-                                    str(save_path),  # Convert Path to string
+                                    image_public_url,  # Use the public URL instead of a local path
                                     file_name,
                                     page_number=page_num_human
                                 )
@@ -408,12 +411,13 @@ if view_mode == "Creator Studio":
                                     # Add image reference to the flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "path": str(save_path)
+                                        "path": image_public_url  # Save the public URL as the image reference
                                     }]
                                     all_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
                                     st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
                                     st.code(gpt_output, language="json")
+
                             else:
                                 # Process as text (existing flow)
                                 page_text = page.get_text()
@@ -475,12 +479,12 @@ if view_mode == "Creator Studio":
                         
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
-                        
-                        # Save the mindmap but don't display it
-                        mindmap_dir = Path("data") / selected_fach / "mindmaps"
-                        mindmap_html_path = mindmap_dir / f"{file_name.split('.')[0]}_mindmap.html"
-                        net.save_graph(str(mindmap_html_path))
-                        st.success("✅ Mindmap wurde erstellt und gespeichert! Sie kann im Learning Studio angesehen werden.")
+
+                        # Generate the mindmap HTML as a string.
+                        mindmap_html = net.generate_html()  # Adjust this line based on how you capture the HTML
+                        supabase.storage.from_("mindmaps").upload(f"{selected_fach}/{file_name.split('.')[0]}_mindmap.html", mindmap_html)
+                        st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
+
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
             
