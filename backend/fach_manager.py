@@ -11,24 +11,11 @@ key = st.secrets["supabase"]["key"]
 bucket_name = st.secrets["supabase"]["bucket"]
 supabase = create_client(url, key)
 
-# --- Helper: Create a “directory marker” file ---
-def create_folder_marker(path: str):
-    """
-    In Supabase Storage, folders are virtual.
-    Here we simulate a folder by uploading an empty marker file.
-    """
-    try:
-        # Try to upload an empty file (will fail if it already exists)
-        supabase.storage.from_(bucket_name).upload(path, b"")
-    except Exception as e:
-        # Optionally ignore errors if the marker already exists.
-        pass
 
 # --- List all "Fächer" (folders) ---
 def get_all_faecher():
     """
-    Returns a sorted list of fach names (i.e. folders) by listing root files 
-    and finding our directory markers (files named ".directory").
+    Returns a sorted list of fach names by listing top-level folders in the bucket.
     """
     try:
         files = supabase.storage.from_(bucket_name).list()
@@ -37,38 +24,33 @@ def get_all_faecher():
         return []
     faecher = set()
     for file in files:
-        # Look for markers like "fach_name/.directory"
-        if "/" in file["name"]:
-            parts = file["name"].split("/")
-            if parts[-1] == ".directory" and len(parts) == 2:
-                faecher.add(parts[0])
+        parts = file["name"].split("/")
+        if parts:
+            faecher.add(parts[0])
     return sorted(list(faecher))
 
 # --- Create a new fach folder structure ---
 def create_fach(name):
     """
-    Creates a new fach folder with subfolders and a flashcards.json file.
+    Creates a new fach folder with subfolders and a flashcard.js file.
     """
-    # Create the main fach marker (e.g. "biology/.directory")
-    fach_marker = f"{name}/.directory"
-    create_folder_marker(fach_marker)
-    
-    # Create subfolders: uploads, images, mindmaps
+    # Create subfolders: uploads, images, mindmaps by uploading a placeholder file
     for subfolder in ["uploads", "images", "mindmaps"]:
-        marker = f"{name}/{subfolder}/.directory"
-        create_folder_marker(marker)
-        
-    # Create flashcards.json file if it doesn't exist
-    flashcards_path = f"{name}/flashcards.json"
-    try:
-        # Attempt to download to check if it exists
-        supabase.storage.from_(bucket_name).download(flashcards_path)
-    except Exception:
-        # If not found, create it with empty JSON array content
+        placeholder_path = f"{name}/{subfolder}/placeholder.txt"
         try:
-            supabase.storage.from_(bucket_name).upload(flashcards_path, "[]".encode("utf-8"))
+            supabase.storage.from_(bucket_name).upload(placeholder_path, "".encode("utf-8"))
+        except Exception:
+            pass  # Ignore if the placeholder already exists
+
+    # Create flashcard.js file if it doesn't exist
+    flashcard_path = f"{name}/flashcard.js"
+    try:
+        supabase.storage.from_(bucket_name).download(flashcard_path)
+    except Exception:
+        try:
+            supabase.storage.from_(bucket_name).upload(flashcard_path, "[]".encode("utf-8"))
         except Exception as e2:
-            st.error(f"Error creating flashcards.json: {e2}")
+            st.error(f"Error creating flashcard.js: {e2}")
 
 # --- Delete a fach folder (all files under the fach prefix) ---
 def delete_fach(fach_name):
