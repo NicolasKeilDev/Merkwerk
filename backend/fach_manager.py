@@ -31,7 +31,7 @@ def get_all_faecher():
     and finding our directory markers (files named ".directory").
     """
     try:
-        files = supabase.storage.from_(bucket_name).list("", limit=1000)
+        files = supabase.storage.from_(bucket_name).list()
     except Exception as e:
         st.error(f"Error listing files: {e}")
         return []
