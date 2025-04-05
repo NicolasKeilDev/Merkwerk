@@ -313,16 +313,41 @@ if view_mode == "Creator Studio":
                 upload_file_path = st.session_state.selected_file_path
             
             # ------------------------------
-            # PDF Preview
+            # PDF Preview without local file saving:
             # ------------------------------
             st.subheader("PDF Vorschau")
-            # Get the public URL of the uploaded PDF from Supabase.
-            signed_url_resp = supabase.storage.from_(bucket_name).create_signed_url(f"{selected_fach}/uploads/{file_name}", 3600)
-            pdf_url = signed_url_resp.get("signedURL")
-            pdf_display = f"""
-            <iframe src="{pdf_url}" width="100%" height="800" type="application/pdf"></iframe>
-            """
-            st.markdown(pdf_display, unsafe_allow_html=True)
+
+            # List files in the uploads folder for the selected fach
+            uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
+
+            # Filter out any placeholder or unwanted files
+            files = [f for f in uploaded_files_resp if f["name"] != "placeholder.txt"]
+
+            if files:
+                # Sort files by creation date descending (newest first)
+                # Adjust the key below if your metadata field is named differently
+                newest_file = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)[0]
+                newest_file_name = newest_file["name"]
+
+                try:
+                    # Download the newest file directly from Supabase storage.
+                    # If the download() method returns a response object, use .content to get the bytes.
+                    download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
+                    pdf_bytes = download_response.content  # Use .content if necessary
+                    
+                    # Convert the file bytes to a base64 string
+                    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                    
+                    # Embed the PDF using a data URI in an iframe
+                    pdf_display = f"""
+                    <iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>
+                    """
+                    st.markdown(pdf_display, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Fehler beim Anzeigen der PDF-Vorschau: {str(e)}")
+            else:
+                st.info("Noch keine PDFs hochgeladen.")
+
 
 
 
