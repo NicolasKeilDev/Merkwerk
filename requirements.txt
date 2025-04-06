@@ -3,3 +3,4 @@ supabase
 PyMuPDF
 openai
 python-dotenv
+pyvis
