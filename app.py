@@ -375,7 +375,8 @@ if view_mode == "Creator Studio":
                     </body>
                     </html>
                     """
-                    st.components.v1.html(html_code, height=850)
+                    st.components.v1.html(html_code, height=850, sandbox=False)
+
 
 
                 except Exception as e:
