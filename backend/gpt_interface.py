@@ -107,7 +107,7 @@ def analyze_image_for_flashcard(image_path, upload_name, page_number):
         """
         
         response = client.chat.completions.create(
-            model="gpt-4o",  # Changed from gpt-4o-mini to gpt-4o
+            model="gpt-4o-mini",  
             messages=[
                 {
                     "role": "user",

@@ -43,15 +43,15 @@ def create_fach(name):
         except Exception:
             pass  # Ignore if the placeholder already exists
 
-    # Create flashcard.json file if it doesn't exist
-    flashcard_path = f"{name}/flashcard.json"
+    # Create flashcards.json file if it doesn't exist
+    flashcard_path = f"{name}/flashcards.json"
     try:
         supabase.storage.from_(bucket_name).download(flashcard_path)
     except Exception:
         try:
             supabase.storage.from_(bucket_name).upload(flashcard_path, "[]".encode("utf-8"))
         except Exception as e2:
-            st.error(f"Error creating flashcard.json: {e2}")
+            st.error(f"Error creating flashcards.json: {e2}")
 
 # --- Delete a fach folder (all files under the fach prefix) ---
 def delete_fach(fach_name):
