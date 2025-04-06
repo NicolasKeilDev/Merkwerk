@@ -396,11 +396,10 @@ if view_mode == "Creator Studio":
                                 
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 image_path = f"{file_name.split('.')[0]}_page_{page_num_human}.png"
-                                # Upload the image to Supabase storage
-                                supabase.storage.from_("images").upload(f"{selected_fach}/{image_path}", pix.tobytes())
 
-                                # Retrieve the public URL of the uploaded image
-                                image_public_url = supabase.storage.from_("images").get_public_url(f"{selected_fach}/{image_path}")
+                                supabase.storage.from_(bucket_name).upload(f"{selected_fach}/images/{image_path}", pix.tobytes())
+                                image_public_url = supabase.storage.from_(bucket_name).get_public_url(f"{selected_fach}/images/{image_path}")
+
 
                                 # Now analyze the image using GPT-4 Vision using the public URL
                                 gpt_output = analyze_image_for_flashcard(
@@ -482,7 +481,8 @@ if view_mode == "Creator Studio":
 
                         # Generate the mindmap HTML as a string.
                         mindmap_html = net.generate_html()  # Adjust this line based on how you capture the HTML
-                        supabase.storage.from_("mindmaps").upload(f"{selected_fach}/{file_name.split('.')[0]}_mindmap.html", mindmap_html)
+                        supabase.storage.from_(bucket_name).upload(f"{selected_fach}/mindmaps/{file_name.split('.')[0]}_mindmap.html", mindmap_html)
+
                         st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
 
                     except Exception as e:
