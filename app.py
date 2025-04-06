@@ -9,7 +9,7 @@ import random
 
 import streamlit.components.v1 as components
 
-from backend.fach_manager import get_all_faecher, create_fach, delete_fach, rename_fach
+from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
 from backend.gpt_interface import generate_card_from_text, generate_mindmap_from_text, analyze_image_for_flashcard
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
@@ -376,7 +376,8 @@ if view_mode == "Creator Studio":
                 # (Add state management for this if needed, e.g., st.session_state.mindmap_html = None)
                 with st.spinner("GPT erstellt Lernkarten..."):
                     image_pages = st.session_state.image_recognition_pages.get(file_name, [])
-                    doc = fitz.open(upload_file_path)
+                    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
                     all_flashcards = []
                     progress_bar = st.progress(0)
                     
