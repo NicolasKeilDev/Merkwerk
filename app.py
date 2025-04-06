@@ -449,17 +449,18 @@ if view_mode == "Creator Studio":
                     st.success(f"{len(all_flashcards)} Lernkarten wurden erstellt!")
         
             # Create mindmap button
-            mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:") # Use container width for blocky look
+            mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
 
             # Process mindmap creation
             if mindmap_btn:
-                 # Reset potential flashcard display state if generating mindmap
-                 # (Add state management if needed)
                 with st.spinner("GPT erstellt Mindmap..."):
                     try:
-                        # Extract all text from PDF (excluding image and excluded pages)
+                        import io
+                        # Create an in-memory stream from the PDF bytes
+                        pdf_stream = io.BytesIO(pdf_bytes)
+                        # Use the in-memory stream instead of a local file path
                         content = extract_content_from_pdf(
-                            upload_file_path, 
+                            pdf_stream, 
                             image_pages=st.session_state.image_recognition_pages.get(file_name, []),
                             excluded_pages=st.session_state.excluded_pages.get(file_name, [])
                         )
@@ -468,27 +469,30 @@ if view_mode == "Creator Studio":
                         mindmap_json = generate_mindmap_from_text(full_text, file_name)
                         mindmap_data = json.loads(mindmap_json)
                         
-                        # Create a network visualization
+                        # Create a network visualization using pyvis
                         from pyvis.network import Network
                         net = Network(height="600px", width="100%", directed=True, notebook=False)
                         
-                        # Add nodes and edges
+                        # Add nodes and edges to the network
                         for node in mindmap_data["nodes"]:
                             net.add_node(node, label=node)
-                        
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
-
-                        # Generate the mindmap HTML as a string.
-                        mindmap_html = net.generate_html()  # Adjust this line based on how you capture the HTML
+                        
+                        # Generate the HTML for the mindmap
+                        mindmap_html = net.generate_html()
+                        
+                        # Upload the mindmap HTML to Supabase in the proper subfolder
                         supabase.storage.from_(bucket_name).upload(f"{selected_fach}/mindmaps/{file_name.split('.')[0]}_mindmap.html", mindmap_html)
-
+                        
                         st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
-
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+
             
                     
+
+
 elif view_mode == "Learning Studio":
     faecher = get_all_faecher()
     if not faecher:
