@@ -3,10 +3,9 @@
 import streamlit as st
 from pathlib import Path
 import json
-import os
 import base64
 import fitz  # PyMuPDF
-import random # <-- Add this import
+import random 
 
 import streamlit.components.v1 as components
 
@@ -100,8 +99,6 @@ with col2:
 # Use the view_mode from session state for the main content
 view_mode = st.session_state.view_mode
 
-
-
 # ---------- Helper Function for Card Selection ----------
 def select_next_card(cards):
     """Selects the next card index based on priority using weighted random selection."""
@@ -139,6 +136,15 @@ def select_next_card(cards):
 
     st.session_state.last_shown_index = chosen_index
     return chosen_index
+
+def render_pdf_from_bytes(pdf_bytes):
+    # Convert PDF to base64
+    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+    # Display via iframe
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800px" type="application/pdf"></iframe>'
+    st.components.v1.html(pdf_display, height=850, scrolling=True)
+
+
 
 if view_mode == "Creator Studio":
     # ------------------------------
@@ -272,8 +278,6 @@ if view_mode == "Creator Studio":
             st.info("Noch keine PDFs hochgeladen.")
 
 
-            
-        
         # PDF Upload for the selected Fach
         # Initialize a session state variable to track uploaded files
         if "uploaded_files_tracker" not in st.session_state:
@@ -284,7 +288,7 @@ if view_mode == "Creator Studio":
         st.markdown("---")  # Add a divider for visual separation
 
         # ------------------------------
-        # PDF Preview and processing (full width, below the columns)
+        # PDF Preview and processing 
         # ------------------------------
         if uploaded_pdf is not None or 'uploaded_pdf' in st.session_state:
             # Define storage path and file path
@@ -312,12 +316,9 @@ if view_mode == "Creator Studio":
                 file_name = st.session_state.uploaded_pdf
                 upload_file_path = st.session_state.selected_file_path
             
+
             # ------------------------------
-            # PDF Preview without local file saving:
-            # ------------------------------
-            # ------------------------------
-            # ------------------------------
-            # PDF Preview and Processing without Local File Saving:
+            # PDF Preview and Processing
             # ------------------------------
             st.subheader("PDF Vorschau")
 
@@ -337,46 +338,7 @@ if view_mode == "Creator Studio":
                     download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
                     pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
 
-                    # Download the newest file bytes from Supabase
-                    download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
-                    pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
-
-                    # Open the PDF from the downloaded bytes
-                    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-                    page_count = doc.page_count
-
-                    # Convert the file bytes to a base64 string for embedding
-                    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-
-                    html_code = f"""
-                    <html>
-                    <body>
-                        <div id="pdfContainer"></div>
-                        <script>
-                        // Convert the base64 PDF string back into binary
-                        var base64Data = "{base64_pdf}";
-                        var byteCharacters = atob(base64Data);
-                        var byteNumbers = new Array(byteCharacters.length);
-                        for (var i = 0; i < byteCharacters.length; i++) {{
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }}
-                        var byteArray = new Uint8Array(byteNumbers);
-                        // Create a blob from the binary data with the correct MIME type
-                        var blob = new Blob([byteArray], {{type: 'application/pdf'}});
-                        // Generate a blob URL for the PDF
-                        var blobUrl = URL.createObjectURL(blob);
-                        // Create an iframe and set its source to the blob URL
-                        var iframe = document.createElement('iframe');
-                        iframe.style.width = "100%";
-                        iframe.style.height = "800px";
-                        iframe.src = blobUrl;
-                        document.getElementById("pdfContainer").appendChild(iframe);
-                        </script>
-                    </body>
-                    </html>
-                    """
-                    st.components.v1.html(html_code, height=850, sandbox=False)
-
+                    render_pdf_from_bytes(pdf_bytes)
 
 
                 except Exception as e:
@@ -385,11 +347,6 @@ if view_mode == "Creator Studio":
                 st.info("Noch keine PDFs hochgeladen.")
 
 
-
-
-
-
-                
             # ------------------------------
             # Flashcard creation section
             # ------------------------------
@@ -527,13 +484,10 @@ if view_mode == "Creator Studio":
                         save_flashcard(selected_fach, flashcard)
                     
                     st.success(f"{len(all_flashcards)} Lernkarten wurden erstellt!")
-            
         
             # Create mindmap button
             mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:") # Use container width for blocky look
 
-
-            
             # Process mindmap creation
             if mindmap_btn:
                  # Reset potential flashcard display state if generating mindmap
