@@ -1,41 +1,80 @@
 # backend/flashcard_manager.py
 import json
-from pathlib import Path
+import streamlit as st
+from supabase import create_client
+
+# Initialize Supabase client using secrets
+url = st.secrets["supabase"]["url"]
+key = st.secrets["supabase"]["key"]
+bucket_name = st.secrets["supabase"]["bucket"]
+supabase = create_client(url, key)
 
 def get_flashcards(fach_name):
-    path = Path("data") / fach_name / "flashcards.json"
-    if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
-    return []
-
-def save_flashcard(fach_name, flashcard_dict):
-    path = Path("data") / fach_name / "flashcards.json"
-    cards = get_flashcards(fach_name)
-    cards.append(flashcard_dict)
-    path.write_text(json.dumps(cards, indent=2, ensure_ascii=False), encoding="utf-8")
+    """
+    Download flashcards.json from Supabase storage and return the flashcards list.
+    If the file doesn't exist, return an empty list.
+    """
+    file_path = f"{fach_name}/flashcards.json"
+    try:
+        response = supabase.storage.from_(bucket_name).download(file_path)
+        # response may be bytes or have a content attribute
+        if isinstance(response, bytes):
+            content = response.decode('utf-8')
+        else:
+            content = response.content.decode('utf-8')
+        return json.loads(content)
+    except Exception:
+        # File doesn't exist or another error occurred: return empty list
+        return []
 
 def update_flashcards(fach_name, flashcards):
-    path = Path("data") / fach_name / "flashcards.json"
-    path.write_text(json.dumps(flashcards, indent=2, ensure_ascii=False), encoding="utf-8")
+    """
+    Update flashcards.json in Supabase storage with the new flashcards content.
+    This removes any existing file and uploads the new content.
+    """
+    file_path = f"{fach_name}/flashcards.json"
+    content = json.dumps(flashcards, indent=2, ensure_ascii=False)
+    try:
+        # Remove the existing file if it exists (ignore error if not)
+        try:
+            supabase.storage.from_(bucket_name).remove([file_path])
+        except Exception:
+            pass
+        # Upload the new content (encoded as bytes)
+        supabase.storage.from_(bucket_name).upload(file_path, content.encode('utf-8'))
+    except Exception as e:
+        st.error(f"Error updating flashcards: {e}")
+
+def save_flashcard(fach_name, flashcard_dict):
+    """
+    Append a new flashcard to the flashcards.json file stored in Supabase.
+    """
+    flashcards = get_flashcards(fach_name)
+    flashcards.append(flashcard_dict)
+    update_flashcards(fach_name, flashcards)
 
 def delete_document(fach_name, document_name):
-    """Delete a PDF document, remove its flashcards and corresponding mindmap file."""
-    pdf_path = Path("data") / fach_name / "uploads" / document_name
-    if pdf_path.exists():
-        pdf_path.unlink()
-    # Remove all flashcards that belong to this document
+    """
+    Delete a PDF document from the uploads folder, remove its flashcards,
+    and delete the corresponding mindmap file from Supabase storage.
+    """
+    # Delete the PDF document from uploads
+    pdf_path = f"{fach_name}/uploads/{document_name}"
+    try:
+        supabase.storage.from_(bucket_name).remove([pdf_path])
+    except Exception as e:
+        st.error(f"Error deleting PDF: {e}")
+
+    # Remove flashcards belonging to this document
     flashcards = get_flashcards(fach_name)
     original_count = len(flashcards)
     flashcards = [card for card in flashcards if card.get("upload", "Unbekannt") != document_name]
     if len(flashcards) < original_count:
         update_flashcards(fach_name, flashcards)
-    # Remove corresponding mindmap if it exists
-    mindmap_file = Path("mindmap") / fach_name / f"{document_name.split('.')[0]}_mindmap.html"
-    if mindmap_file.exists():
-        mindmap_file.unlink()
 
-def update_flashcards(fach_name, flashcards):
-    """Update the flashcards JSON file with new content."""
-    path = Path("data") / fach_name / "flashcards.json"
-    with open(path, 'w', encoding="utf-8") as f:
-        json.dump(flashcards, f, ensure_ascii=False, indent=2)
+    # Delete the corresponding mindmap file from the mindmaps folder
+    mindmap_path = f"{fach_name}/mindmaps/{document_name.split('.')[0]}_mindmap.html"
+    try:
+        supabase.storage.from_(bucket_name).remove([mindmap_path])
+    except Exception as e:
+        st.error(f"Error deleting mindmap: {e}")
