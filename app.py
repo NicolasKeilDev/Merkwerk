@@ -137,14 +137,6 @@ def select_next_card(cards):
     st.session_state.last_shown_index = chosen_index
     return chosen_index
 
-def render_pdf_from_bytes(pdf_bytes):
-    # Convert PDF to base64
-    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    # Display via iframe
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800px" type="application/pdf"></iframe>'
-    st.components.v1.html(pdf_display, height=850, scrolling=True)
-
-
 
 if view_mode == "Creator Studio":
     # ------------------------------
@@ -316,35 +308,6 @@ if view_mode == "Creator Studio":
                 file_name = st.session_state.uploaded_pdf
                 upload_file_path = st.session_state.selected_file_path
             
-
-            # ------------------------------
-            # PDF Preview and Processing
-            # ------------------------------
-            st.subheader("PDF Vorschau")
-
-            # List files in the uploads folder for the selected Fach
-            uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
-
-            # Filter out any placeholder or unwanted files
-            files = [f for f in uploaded_files_resp if f["name"] != "placeholder.txt"]
-
-            if files:
-                # Sort files by creation date descending (newest first)
-                newest_file = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)[0]
-                newest_file_name = newest_file["name"]
-
-                try:
-                    # Download the newest file directly from Supabase storage.
-                    download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{newest_file_name}")
-                    pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
-
-                    render_pdf_from_bytes(pdf_bytes)
-
-
-                except Exception as e:
-                    st.error(f"Fehler beim Anzeigen der PDF-Vorschau: {str(e)}")
-            else:
-                st.info("Noch keine PDFs hochgeladen.")
 
 
             # ------------------------------
