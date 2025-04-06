@@ -347,32 +347,36 @@ if view_mode == "Creator Studio":
 
                     # Convert the file bytes to a base64 string for embedding
                     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-                    
-                    # After obtaining base64_pdf from your pdf_bytes:
-                    pdf_display = f"""
-                    <div id="pdfContainer"></div>
-                    <script>
-                    // Convert the base64 PDF string back into a binary buffer
-                    const base64Data = "{base64_pdf}";
-                    const byteCharacters = atob(base64Data);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {{
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }}
-                    const byteArray = new Uint8Array(byteNumbers);
-                    // Create a blob from the binary data
-                    const blob = new Blob([byteArray], {{type: "application/pdf"}});
-                    // Generate a blob URL
-                    const blobUrl = URL.createObjectURL(blob);
-                    // Create and insert an iframe that uses the blob URL
-                    const iframe = document.createElement("iframe");
-                    iframe.style.width = "100%";
-                    iframe.style.height = "800px";
-                    iframe.src = blobUrl;
-                    document.getElementById("pdfContainer").appendChild(iframe);
-                    </script>
+
+                    html_code = f"""
+                    <html>
+                    <body>
+                        <div id="pdfContainer"></div>
+                        <script>
+                        // Convert the base64 PDF string back into binary
+                        var base64Data = "{base64_pdf}";
+                        var byteCharacters = atob(base64Data);
+                        var byteNumbers = new Array(byteCharacters.length);
+                        for (var i = 0; i < byteCharacters.length; i++) {{
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }}
+                        var byteArray = new Uint8Array(byteNumbers);
+                        // Create a blob from the binary data with the correct MIME type
+                        var blob = new Blob([byteArray], {{type: 'application/pdf'}});
+                        // Generate a blob URL for the PDF
+                        var blobUrl = URL.createObjectURL(blob);
+                        // Create an iframe and set its source to the blob URL
+                        var iframe = document.createElement('iframe');
+                        iframe.style.width = "100%";
+                        iframe.style.height = "800px";
+                        iframe.src = blobUrl;
+                        document.getElementById("pdfContainer").appendChild(iframe);
+                        </script>
+                    </body>
+                    </html>
                     """
-                    st.markdown(pdf_display, unsafe_allow_html=True)
+                    st.components.v1.html(html_code, height=850)
+
 
                 except Exception as e:
                     st.error(f"Fehler beim Anzeigen der PDF-Vorschau: {str(e)}")
