@@ -813,26 +813,30 @@ elif view_mode == "Learning Studio":
                         new_answer = st.text_area("Antwort (jede Zeile ein Punkt)", value=new_answer_str, height=150, key=f"edit_a{edit_key_suffix}")
 
                         col_save, col_cancel = st.columns(2)
-                        
                         if col_save.button("Speichern", key=f"save_edit{edit_key_suffix}", type="tertiary"):
                             updated_flashcard = current_card.copy()
                             updated_flashcard["question"] = new_question
                             updated_flashcard["answer"] = [line.strip() for line in new_answer.split("\n") if line.strip()]
 
-                            # Use object identity to locate the original card in flashcards_all
-                            original_index_to_update = None
+                            # Find the original card in flashcards_all and update it
+                            original_index_to_update = -1
                             for idx, card in enumerate(flashcards_all):
-                                if card is current_card:
-                                    original_index_to_update = idx
-                                    break
+                                # Match based on original question/answer before potential edits in the same session
+                                if card.get("upload", "Unbekannt") == selected_upload and card["question"] == current_card["question"] and card["answer"] == current_card["answer"]:
+                                     original_index_to_update = idx
+                                     break
 
-                            if original_index_to_update is not None:
+                            if original_index_to_update != -1:
                                 flashcards_all[original_index_to_update] = updated_flashcard
                                 update_flashcards(selected_fach, flashcards_all)
                                 st.success("Flashcard aktualisiert!")
                                 st.session_state.editing_flashcard = False
-                                st.session_state.revealed = False  # Hide answer after saving edit
-                                st.rerun()
+                                st.session_state.revealed = False # Hide answer after saving edit
+                                # We keep the same card index after editing
+                                try:
+                                    st.rerun()
+                                except AttributeError:
+                                    st.warning("st.rerun() nicht verfügbar. Bitte aktualisieren Sie Streamlit.")
                             else:
                                 st.error("Originalkarte zum Aktualisieren nicht gefunden.")
 
