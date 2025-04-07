@@ -2,7 +2,7 @@
 
 import json
 import streamlit as st
-import requests
+import re
 import base64
 from openai import OpenAI
 
@@ -73,12 +73,12 @@ def generate_card_from_text(text, upload_name, page_number):
         }
         return json.dumps(error_json)
 
-def analyze_image_for_flashcard(image_url, upload_name, page_number):
+def analyze_image_for_flashcard(image_filename, upload_name, page_number, selected_fach, supabase, bucket_name):
     try:
-        # Securely fetch the image from the public URL
-        response = requests.get(image_url)
-        response.raise_for_status()  # Ensure the request was successful
-        base64_image = base64.b64encode(response.content).decode('utf-8')
+        # Download the image bytes directly from Supabase storage
+        download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/images/{image_filename}")
+        image_bytes = download_response if isinstance(download_response, bytes) else download_response.content
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
         
         prompt = f"""
         Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
@@ -106,15 +106,12 @@ def analyze_image_for_flashcard(image_url, upload_name, page_number):
         """
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  
+            model="gpt-4o-mini",
             messages=[{
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url", 
-                        "image_url": {"url": f"data:image/png;base64,{base64_image}"}
-                    }
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
                 ]
             }],
             temperature=0.3,
@@ -128,7 +125,6 @@ def analyze_image_for_flashcard(image_url, upload_name, page_number):
             json.loads(content)
             return content
         except json.JSONDecodeError:
-            import re
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
@@ -138,7 +134,8 @@ def analyze_image_for_flashcard(image_url, upload_name, page_number):
                 fallback_json = {
                     "upload": upload_name,
                     "question": f"Content from image on page {page_number} (Error: API returned invalid JSON)",
-                    "answer": ["The API response couldn't be parsed properly.", f"Please check the image on page {page_number} directly."],
+                    "answer": ["The API response couldn't be parsed properly.", 
+                               f"Please check the image on page {page_number} directly."],
                     "page": page_number
                 }
                 return json.dumps(fallback_json)
@@ -146,10 +143,11 @@ def analyze_image_for_flashcard(image_url, upload_name, page_number):
         error_json = {
             "upload": upload_name,
             "question": f"Error processing image on page {page_number}",
-            "answer": [f"An error occurred: {str(e)}", "Please try regenerating this card or check the image."],
+            "answer": [f"An error occurred: {str(e)}", 
+                       "Please try regenerating this card or check the image."],
             "page": page_number
         }
-        return json.dumps(error_json)
+        return json.dumps(error_json)    
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
     Erstelle eine Mindmap aus dem folgenden Text. Das zentrale Thema heißt "{document_name}".
