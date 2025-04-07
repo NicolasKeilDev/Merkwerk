@@ -13,8 +13,6 @@ from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
 from backend.gpt_interface import generate_card_from_text, generate_mindmap_from_text, analyze_image_for_flashcard
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
-from backend.mindmap_manager import get_mindmap_html, save_mindmap_html, list_mindmaps
-
 from supabase import create_client
 
 # --- Setup Supabase client using secrets ---
@@ -245,16 +243,17 @@ if view_mode == "Creator Studio":
 
         if uploaded_files:
             col1, col2 = st.columns([0.8, 0.2])
-            
+                        
             # Add a selectbox to choose an already uploaded file
             selected_existing_file = st.selectbox(
                 "Bereits hochgeladene PDF auswählen:",
                 options=[""] + uploaded_files,
-                index=0
+                index=0,
+                key="existing_file_select"
             )
-            
-            # If user selected an existing file, set it as the current file
-            if selected_existing_file:
+
+            # Only update session state and rerun if the selection has changed.
+            if selected_existing_file and st.session_state.get("uploaded_pdf") != selected_existing_file:
                 st.session_state.uploaded_pdf = selected_existing_file
                 st.session_state.selected_file_path = f"supabase://{bucket_name}/{selected_fach}/uploads/{selected_existing_file}"
                 st.rerun()  # Rerun to update the interface
