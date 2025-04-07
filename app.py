@@ -355,22 +355,22 @@ if view_mode == "Creator Studio":
             # Save the exclusion selection in session state
             st.session_state.excluded_pages[file_name] = excluded_pages
 
-                # Multi-select for image recognition pages (now inside the first button's column)
-            selected_pages = st.multiselect(
-                "Seiten für Bilderkennung (optional):", # Shortened label
+            # Capture the multiselect value in a local variable (do not set a key to avoid auto-updating session state)
+            temp_selected_pages = st.multiselect(
+                "Seiten für Bilderkennung (optional):",
                 options=list(range(1, page_count + 1)),
-                default=st.session_state.image_recognition_pages.get(file_name, []),
-                key=f"img_select_{file_name}" # Add unique key based on file
+                default=st.session_state.image_recognition_pages.get(file_name, [])
             )
 
-            # Save the selection in session state immediately on change (handled by Streamlit)
-            st.session_state.image_recognition_pages[file_name] = selected_pages
+
 
             # Create flashcards button (below multiselect in the same column)
             create_flashcards = st.button("Lernkarten erstellen", key="create_flashcards", use_container_width=True, icon=":material/article:") # Use container width for blocky look
 
             # Process flashcard creation
             if create_flashcards:
+                # Save the selection in session state immediately on change (handled by Streamlit)
+                st.session_state.image_recognition_pages[file_name] = temp_selected_pages
                 # Reset potential mindmap display state if generating cards
                 # (Add state management for this if needed, e.g., st.session_state.mindmap_html = None)
                 with st.spinner("GPT erstellt Lernkarten..."):
