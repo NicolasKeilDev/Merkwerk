@@ -499,11 +499,7 @@ if view_mode == "Creator Studio":
                         st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
-
-
-            
-                    
-
+                        
 
 elif view_mode == "Learning Studio":
     faecher = get_all_faecher()
@@ -563,20 +559,26 @@ elif view_mode == "Learning Studio":
             if 'learn_selected_upload' not in st.session_state:
                 st.session_state.learn_selected_upload = None
 
-
             # Add some vertical spacing for better visual separation
             st.markdown("<br>", unsafe_allow_html=True)
 
             # Get unique upload filenames from flashcards
             upload_files = sorted(list(set(card.get("upload", "Unbekannt") for card in flashcards_all)))
-            
-            # Also check for mindmaps without cards
-            mindmap_dir = Path("data") / selected_fach / "mindmaps"
-            if mindmap_dir.exists():
-                # Get base filenames from mindmap filenames (removing "_mindmap.html")
+
+            # Also check for mindmaps without cards using Supabase storage
+            try:
+                mindmap_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/mindmaps/")
+            except Exception as e:
+                mindmap_files_resp = []
+
+            if mindmap_files_resp:
                 mindmap_basenames = []
-                for mindmap_file in mindmap_dir.glob("*_mindmap.html"):
-                    base_name = mindmap_file.name.replace("_mindmap.html", ".pdf")
+                for file in mindmap_files_resp:
+                    # Skip placeholders if any exist
+                    if file.get("name") == "placeholder.txt":
+                        continue
+                    # Convert mindmap filename from "document_mindmap.html" to "document.pdf"
+                    base_name = file["name"].replace("_mindmap.html", ".pdf")
                     mindmap_basenames.append(base_name)
                 
                 # Add mindmap files to the upload files list if they don't already exist
@@ -586,27 +588,32 @@ elif view_mode == "Learning Studio":
                 
                 # Resort the list after adding new files
                 upload_files = sorted(upload_files)
-            
+
             if not upload_files:
                 st.warning("Keine Lernkarten oder Mindmaps in diesem Fach gefunden.")
             else:
                 selected_upload = st.selectbox("Wähle einen Upload zum Lernen:", upload_files, key="learn_upload_select")
 
-                # Display mindmap for the selected document
                 if selected_upload:
-                    # Determine the expected mindmap file path
+                    # Determine the expected mindmap file name from the selected PDF upload
                     mindmap_filename = f"{selected_upload.split('.')[0]}_mindmap.html"
-                    mindmap_path = Path("data") / selected_fach / "mindmaps" / mindmap_filename
+                    # Build the file path in Supabase: <selected_fach>/mindmaps/<mindmap_filename>
+                    mindmap_file_path = f"{selected_fach}/mindmaps/{mindmap_filename}"
                     
-                    if mindmap_path.exists():
+                    try:
+                        # Attempt to download the mindmap HTML from Supabase
+                        download_response = supabase.storage.from_(bucket_name).download(mindmap_file_path)
+                        # If the download_response is bytes, decode it; else check for a .content attribute
+                        if isinstance(download_response, bytes):
+                            mindmap_html = download_response.decode("utf-8")
+                        else:
+                            mindmap_html = download_response.content.decode("utf-8")
+                        
                         st.subheader("Mindmap")
-                        # Read the HTML content
-                        with open(mindmap_path, "r", encoding="utf-8") as f:
-                            mindmap_html = f.read()
-                        # Display using components.html
                         components.html(mindmap_html, height=600)
-                    else:
+                    except Exception as e:
                         st.info("Keine Mindmap für dieses Dokument vorhanden. Erstelle eine im Creator Studio.")
+
 
                 # --- Reset state if Fach or Upload changes ---
                 fach_changed = st.session_state.learn_selected_fach != selected_fach
