@@ -456,9 +456,12 @@ if view_mode == "Creator Studio":
                 with st.spinner("GPT erstellt Mindmap..."):
                     try:
                         import io
+                        from pathlib import Path
+                        
                         # Create an in-memory stream from the PDF bytes
                         pdf_stream = io.BytesIO(pdf_bytes)
-                        # Use the in-memory stream instead of a local file path
+                        
+                        # Use the in-memory stream to extract content
                         content = extract_content_from_pdf(
                             pdf_stream, 
                             image_pages=st.session_state.image_recognition_pages.get(file_name, []),
@@ -466,6 +469,7 @@ if view_mode == "Creator Studio":
                         )
                         full_text = content["text"]
                         
+                        # Generate mindmap JSON and parse it
                         mindmap_json = generate_mindmap_from_text(full_text, file_name)
                         mindmap_data = json.loads(mindmap_json)
                         
@@ -473,21 +477,29 @@ if view_mode == "Creator Studio":
                         from pyvis.network import Network
                         net = Network(height="600px", width="100%", directed=True, notebook=False)
                         
-                        # Add nodes and edges to the network
                         for node in mindmap_data["nodes"]:
                             net.add_node(node, label=node)
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
                         
-                        # Generate the HTML for the mindmap
+                        # Generate the mindmap HTML as a string
                         mindmap_html = net.generate_html()
                         
-                        # Upload the mindmap HTML to Supabase in the proper subfolder
-                        supabase.storage.from_(bucket_name).upload(f"{selected_fach}/mindmaps/{file_name.split('.')[0]}_mindmap.html", mindmap_html)
+                        # Use the original file name (PDF) to create the mindmap filename.
+                        document_title = Path(file_name).stem  # e.g., "Praktikumszeugnis (Deutsch)"
+                        mindmap_filename = f"{document_title}_mindmap.html"
+                        
+                        # Upload the mindmap HTML to Supabase.
+                        # Note: Encode the HTML content to bytes.
+                        supabase.storage.from_(bucket_name).upload(
+                            f"{selected_fach}/mindmaps/{mindmap_filename}", 
+                            mindmap_html.encode("utf-8")
+                        )
                         
                         st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+
 
             
                     
