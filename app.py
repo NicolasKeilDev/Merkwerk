@@ -444,6 +444,7 @@ if view_mode == "Creator Studio":
                     update_flashcards(selected_fach, all_flashcards)
                     
                     st.success(f"{len(all_flashcards)} Lernkarten wurden erstellt!")
+                    st.rerun()
         
             # Create mindmap button
             mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
@@ -729,10 +730,7 @@ elif view_mode == "Learning Studio":
                             st.session_state.current_card_index = select_next_card(updated_cards_to_learn)
                             # No need to update last_shown_index here, select_next_card does it
 
-                            try:
-                                st.rerun()  # Rerun to show the new card
-                            except AttributeError:
-                                st.warning("st.rerun() nicht verfügbar. Bitte aktualisieren Sie Streamlit.")
+                            st.rerun()
                         else:
                             st.error("Karte zum Löschen nicht gefunden.")
 

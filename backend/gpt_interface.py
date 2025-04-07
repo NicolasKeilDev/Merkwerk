@@ -2,6 +2,8 @@
 
 import json
 import streamlit as st
+import requests
+import base64
 from openai import OpenAI
 
 # Initialize the OpenAI client with the API key from st.secrets
@@ -71,15 +73,12 @@ def generate_card_from_text(text, upload_name, page_number):
         }
         return json.dumps(error_json)
 
-def analyze_image_for_flashcard(image_path, upload_name, page_number):
-    """
-    Analyze an image using GPT-4 Vision and create a flashcard from it
-    """
+def analyze_image_for_flashcard(image_url, upload_name, page_number):
     try:
-        # Read the image file directly
-        with open(image_path, "rb") as image_file:
-            import base64
-            base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+        # Securely fetch the image from the public URL
+        response = requests.get(image_url)
+        response.raise_for_status()  # Ensure the request was successful
+        base64_image = base64.b64encode(response.content).decode('utf-8')
         
         prompt = f"""
         Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
@@ -100,7 +99,7 @@ def analyze_image_for_flashcard(image_path, upload_name, page_number):
             "Stichpunkt 1",
             "Stichpunkt 2"
           ],
-            "page": {page_number}
+          "page": {page_number}
         }}
         
         WICHTIG: Deine gesamte Antwort muss ausschließlich aus validem JSON bestehen, ohne zusätzlichen Text, Kommentare oder Erklärungen.
@@ -108,62 +107,49 @@ def analyze_image_for_flashcard(image_path, upload_name, page_number):
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",  
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url", 
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url", 
+                        "image_url": {"url": f"data:image/png;base64,{base64_image}"}
+                    }
+                ]
+            }],
             temperature=0.3,
             max_tokens=800
         )
         
         content = response.choices[0].message.content
         
-        # Validate that we have valid JSON before returning
+        # Validate that the response is valid JSON
         try:
-            json.loads(content)  # Just to validate
+            json.loads(content)
             return content
         except json.JSONDecodeError:
-            # If we still get invalid JSON, try to extract just the JSON part
             import re
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
-                # Validate this extracted portion
-                json.loads(potential_json)  # Will raise exception if still invalid
+                json.loads(potential_json)
                 return potential_json
             else:
-                # If no valid JSON found, create a basic valid JSON response
                 fallback_json = {
                     "upload": upload_name,
                     "question": f"Content from image on page {page_number} (Error: API returned invalid JSON)",
-                    "answer": ["The API response couldn't be parsed properly.", 
-                              f"Please check the image on page {page_number} directly."],
+                    "answer": ["The API response couldn't be parsed properly.", f"Please check the image on page {page_number} directly."],
                     "page": page_number
                 }
                 return json.dumps(fallback_json)
     except Exception as e:
-        import traceback
-        error_detail = traceback.format_exc()
-        # Create a valid JSON error response instead of raising an exception
         error_json = {
             "upload": upload_name,
             "question": f"Error processing image on page {page_number}",
-            "answer": [f"An error occurred: {str(e)}", 
-                      "Please try regenerating this card or check the image."],
+            "answer": [f"An error occurred: {str(e)}", "Please try regenerating this card or check the image."],
             "page": page_number
         }
         return json.dumps(error_json)
-
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
     Erstelle eine Mindmap aus dem folgenden Text. Das zentrale Thema heißt "{document_name}".
