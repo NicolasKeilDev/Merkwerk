@@ -441,9 +441,7 @@ if view_mode == "Creator Studio":
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    # Save all flashcards
-                    for flashcard in all_flashcards:
-                        save_flashcard(selected_fach, flashcard)
+                    update_flashcards(selected_fach, all_flashcards)
                     
                     st.success(f"{len(all_flashcards)} Lernkarten wurden erstellt!")
         
