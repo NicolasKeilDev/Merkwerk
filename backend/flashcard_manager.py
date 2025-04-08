@@ -56,7 +56,7 @@ def save_flashcard(fach_name, flashcard_dict):
 def delete_document(fach_name, document_name):
     """
     Delete a PDF document from the uploads folder, remove its flashcards,
-    and delete the corresponding mindmap file from Supabase storage.
+    and delete the corresponding mindmap file and images from Supabase storage.
     """
     # Delete the PDF document from uploads
     pdf_path = f"{fach_name}/uploads/{document_name}"
@@ -78,3 +78,19 @@ def delete_document(fach_name, document_name):
         supabase.storage.from_(bucket_name).remove([mindmap_path])
     except Exception as e:
         st.error(f"Error deleting mindmap: {e}")
+
+    # Delete the corresponding images from the images folder
+    try:
+        images_folder = f"{fach_name}/images/"
+        # List all files in the images folder
+        images_list = supabase.storage.from_(bucket_name).list(images_folder)
+        document_stem = document_name.split('.')[0]
+        images_to_delete = []
+        # Filter files that start with the document stem (e.g. "DocumentName_page_")
+        for file in images_list:
+            if file["name"].startswith(f"{document_stem}_page_"):
+                images_to_delete.append(f"{fach_name}/images/{file['name']}")
+        if images_to_delete:
+            supabase.storage.from_(bucket_name).remove(images_to_delete)
+    except Exception as e:
+        st.error(f"Error deleting images: {e}")
