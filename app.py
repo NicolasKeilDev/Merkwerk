@@ -394,16 +394,15 @@ if view_mode == "Creator Studio":
                         
                         try:
                             if page_num_human in image_pages:
-
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 image_path = f"{file_name.split('.')[0]}_page_{page_num_human}.png"
 
                                 # Upload the image to Supabase storage
                                 supabase.storage.from_(bucket_name).upload(f"{selected_fach}/images/{image_path}", pix.tobytes())
-                                # You can still retrieve the public URL if needed, but now we use the image filename in the analysis function
+                                # Optionally generate the public URL if needed elsewhere:
                                 image_public_url = supabase.storage.from_(bucket_name).get_public_url(f"{selected_fach}/images/{image_path}")
 
-                                # Now call analyze_image_for_flashcard with all required arguments
+                                # Call analyze_image_for_flashcard with all required arguments
                                 gpt_output = analyze_image_for_flashcard(
                                     image_path,      # Using the image file name for identification
                                     file_name,       # Name of the document (upload)
@@ -415,10 +414,10 @@ if view_mode == "Creator Studio":
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
-                                    # Attach image reference to the flashcard
+                                    # Attach image reference to the flashcard using the file name instead of the public URL
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "path": image_path  # Still store the public URL if needed
+                                        "path": image_path  # Now storing the file name only
                                     }]
                                     all_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
