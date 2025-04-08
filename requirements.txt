@@ -4,3 +4,4 @@ PyMuPDF
 openai
 python-dotenv
 pyvis
+boto3

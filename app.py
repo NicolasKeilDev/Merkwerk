@@ -13,7 +13,11 @@ from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
 from backend.gpt_interface import generate_card_from_text, generate_mindmap_from_text, analyze_image_for_flashcard
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
+from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
+import urllib.parse
+
+
 
 # --- Setup Supabase client using secrets ---
 url = st.secrets["supabase"]["url"]
@@ -786,11 +790,27 @@ elif view_mode == "Learning Studio":
                 # Flashcard display on the right (4/5 width)
                 with card_col:
                     if not st.session_state.editing_flashcard:
-                        # Display mode
-                        # Safely get image info with proper None checks
+                        # New approach: fetch image from Supabase via S3 and display it as a data URL
                         images = current_card.get('images', [])
                         img_info = images[0] if images else None
-                        img_path = Path(img_info.get('path', '')) if img_info else None
+
+                        image_html = ""
+                        if st.session_state.revealed and img_info:
+                            try:
+                                # Get the image filename stored in the flashcard JSON. For example, "Praktikumsvertrag (Deutsch)_page_2.png"
+                                image_filename = img_info.get("path")
+                                # Use the helper function to fetch the image bytes from S3 and return a data URL.
+                                data_url = get_image_as_data_url(selected_fach, image_filename)
+                                # Optionally URL-encode the data URL if needed.
+                                encoded_url = urllib.parse.quote(data_url, safe=":/?&=,+")
+                                image_html = (
+                                    f'<div class="flashcard-image" style="margin-top: 20px;">'
+                                    f'<img src="{encoded_url}" style="max-width: 100%;">'
+                                    f'<p style="text-align: center; font-style: italic;">Kontext (Seite {img_info.get("page", "N/A")})</p>'
+                                    f'</div>'
+                                )
+                            except Exception as e:
+                                st.error(f"Error displaying image: {e}")
 
                         st.markdown(f"""
                         <div class="flashcard" style="background-color: white; color: black; padding: 20px; border-radius: 8px;">
@@ -798,10 +818,11 @@ elif view_mode == "Learning Studio":
                                 <h3>Frage:</h3>
                                 <p>{current_card['question']}</p>
                             </div>
-                            {'<div class="flashcard-answer"><h3>Antwort:</h3>' + ''.join(f'<li>{ans}</li>' for ans in current_card["answer"]) + '</div>' if st.session_state.revealed else ''}
-                            {f'<div class="flashcard-image" style="margin-top: 20px;"><img src="data:image/png;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" style="max-width: 100%;"><p style="text-align: center; font-style: italic;">Kontext (Seite {img_info.get("page", "N/A")})</p></div>' if st.session_state.revealed and img_path and img_path.exists() else ''}
+                            {"<div class='flashcard-answer'><h3>Antwort:</h3>" + "".join(f"<li>{ans}</li>" for ans in current_card["answer"]) + "</div>" if st.session_state.revealed else ""}
+                            {image_html}
                         </div>
                         """, unsafe_allow_html=True)
+
                     else:
                         # Editing mode: show a form to edit the flashcard
                         st.markdown("### Flashcard bearbeiten")
