@@ -62,8 +62,6 @@ st.markdown("""
         min-height: unset !important;
         width: auto !important;
     }
-
-
 """, unsafe_allow_html=True)
 
 st.title("Merkwerk")
@@ -392,27 +390,31 @@ if view_mode == "Creator Studio":
                         
                         try:
                             if page_num_human in image_pages:
-                                
+
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 image_path = f"{file_name.split('.')[0]}_page_{page_num_human}.png"
 
+                                # Upload the image to Supabase storage
                                 supabase.storage.from_(bucket_name).upload(f"{selected_fach}/images/{image_path}", pix.tobytes())
+                                # You can still retrieve the public URL if needed, but now we use the image filename in the analysis function
                                 image_public_url = supabase.storage.from_(bucket_name).get_public_url(f"{selected_fach}/images/{image_path}")
 
-
-                                # Now analyze the image using GPT-4 Vision using the public URL
+                                # Now call analyze_image_for_flashcard with all required arguments
                                 gpt_output = analyze_image_for_flashcard(
-                                    image_public_url,  # Use the public URL instead of a local path
-                                    file_name,
-                                    page_number=page_num_human
+                                    image_path,      # Using the image file name for identification
+                                    file_name,       # Name of the document (upload)
+                                    page_number=page_num_human,
+                                    selected_fach=selected_fach,
+                                    supabase=supabase,
+                                    bucket_name=bucket_name
                                 )
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
-                                    # Add image reference to the flashcard
+                                    # Attach image reference to the flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "path": image_public_url  # Save the public URL as the image reference
+                                        "path": image_public_url  # Still store the public URL if needed
                                     }]
                                     all_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:

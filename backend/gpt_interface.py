@@ -148,6 +148,7 @@ def analyze_image_for_flashcard(image_filename, upload_name, page_number, select
             "page": page_number
         }
         return json.dumps(error_json)    
+
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
     Erstelle eine Mindmap aus dem folgenden Text. Das zentrale Thema heißt "{document_name}".
