@@ -418,7 +418,7 @@ if view_mode == "Creator Studio":
                                     # Attach image reference to the flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "path": image_public_url  # Still store the public URL if needed
+                                        "path": image_path  # Still store the public URL if needed
                                     }]
                                     all_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
