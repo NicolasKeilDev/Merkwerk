@@ -73,38 +73,36 @@ def generate_card_from_text(text, upload_name, page_number):
         }
         return json.dumps(error_json)
 
-def analyze_image_for_flashcard(image_filename, upload_name, page_number, selected_fach, supabase, bucket_name):
-    try:
-        # Download the image bytes directly from Supabase storage
-        download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/images/{image_filename}")
-        image_bytes = download_response if isinstance(download_response, bytes) else download_response.content
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        
-        prompt = f"""
-        Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
-        Die Antwort sollte aus einer Liste von Stichpunkten bestehen, die die wichtigsten sichtbaren Informationen zusammenfassen.
-        Dokument: {upload_name}
+# Assuming your client is already initialized globally in this module
+def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
+    """
+    Uses a base64 image (as generated from PDF) to query GPT for flashcard content.
+    """
+    prompt = f"""
+    Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
+    Die Antwort sollte aus einer Liste von Stichpunkten bestehen, die die wichtigsten sichtbaren Informationen zusammenfassen.
+    Dokument: {upload_name}
 
-        Erstelle eine präzise, aber umfassende Frage, die das Hauptthema der Folie abdeckt.
-        Die Antwort-Stichpunkte sollten:
-        - Klar und prägnant sein
-        - Die wichtigsten Konzepte und Details enthalten
-        - In logischer Reihenfolge angeordnet sein
-        
-        Format:
-        {{
-          "upload": "{upload_name}",
-          "question": "...",
-          "answer": [
-            "Stichpunkt 1",
-            "Stichpunkt 2"
-          ],
-          "page": {page_number}
-        }}
-        
-        WICHTIG: Deine gesamte Antwort muss ausschließlich aus validem JSON bestehen, ohne zusätzlichen Text, Kommentare oder Erklärungen.
-        """
-        
+    Erstelle eine präzise, aber umfassende Frage, die das Hauptthema der Folie abdeckt.
+    Die Antwort-Stichpunkte sollten:
+    - Klar und prägnant sein
+    - Die wichtigsten Konzepte und Details enthalten
+    - In logischer Reihenfolge angeordnet sein
+    
+    Format:
+    {{
+      "upload": "{upload_name}",
+      "question": "...",
+      "answer": [
+        "Stichpunkt 1",
+        "Stichpunkt 2"
+      ],
+      "page": {page_number}
+    }}
+    
+    WICHTIG: Deine gesamte Antwort muss ausschließlich aus validem JSON bestehen, ohne zusätzlichen Text, Kommentare oder Erklärungen.
+    """
+    try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{
@@ -117,18 +115,16 @@ def analyze_image_for_flashcard(image_filename, upload_name, page_number, select
             temperature=0.3,
             max_tokens=800
         )
-        
         content = response.choices[0].message.content
         
-        # Validate that the response is valid JSON
         try:
-            json.loads(content)
+            json.loads(content)  # Validate JSON
             return content
         except json.JSONDecodeError:
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
-                json.loads(potential_json)
+                json.loads(potential_json)  # Validate again
                 return potential_json
             else:
                 fallback_json = {
@@ -143,12 +139,10 @@ def analyze_image_for_flashcard(image_filename, upload_name, page_number, select
         error_json = {
             "upload": upload_name,
             "question": f"Error processing image on page {page_number}",
-            "answer": [f"An error occurred: {str(e)}", 
-                       "Please try regenerating this card or check the image."],
+            "answer": [f"An error occurred: {str(e)}", "Please try regenerating this card or check the image."],
             "page": page_number
         }
-        return json.dumps(error_json)    
-
+        return json.dumps(error_json)
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
     Erstelle eine Mindmap aus dem folgenden Text. Das zentrale Thema heißt "{document_name}".

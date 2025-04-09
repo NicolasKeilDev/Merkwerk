@@ -11,7 +11,7 @@ import streamlit.components.v1 as components
 
 from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
-from backend.gpt_interface import generate_card_from_text, generate_mindmap_from_text, analyze_image_for_flashcard
+from backend.gpt_interface import generate_card_from_text, generate_mindmap_from_text, analyze_image_for_flashcard_base64
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
 from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
@@ -394,30 +394,24 @@ if view_mode == "Creator Studio":
                         
                         try:
                             if page_num_human in image_pages:
+                                # Get the pixmap from the PDF page
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                                image_path = f"{file_name.split('.')[0]}_page_{page_num_human}.png"
-
-                                # Upload the image to Supabase storage
-                                supabase.storage.from_(bucket_name).upload(f"{selected_fach}/images/{image_path}", pix.tobytes())
-                                # Optionally generate the public URL if needed elsewhere:
-                                image_public_url = supabase.storage.from_(bucket_name).get_public_url(f"{selected_fach}/images/{image_path}")
-
-                                # Call analyze_image_for_flashcard with all required arguments
-                                gpt_output = analyze_image_for_flashcard(
-                                    image_path,      # Using the image file name for identification
-                                    file_name,       # Name of the document (upload)
-                                    page_number=page_num_human,
-                                    selected_fach=selected_fach,
-                                    supabase=supabase,
-                                    bucket_name=bucket_name
+                                # Instead of saving a JPEG to Supabase storage, convert directly to base64
+                                base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
+                                
+                                # Now call the new function that uses the base64 image
+                                gpt_output = analyze_image_for_flashcard_base64(
+                                    base64_image,      # Pass the base64 string directly
+                                    file_name,         # Document name
+                                    page_number=page_num_human
                                 )
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
-                                    # Attach image reference to the flashcard using the file name instead of the public URL
+                                    # Instead of storing a URL or file name, store the base64 string in the flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "path": image_path  # Now storing the file name only
+                                        "base64": base64_image  # Use a key "base64" here
                                     }]
                                     all_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
@@ -789,25 +783,26 @@ elif view_mode == "Learning Studio":
                 # Flashcard display on the right (4/5 width)
                 with card_col:
                     if not st.session_state.editing_flashcard:
-                        # New approach: fetch image from Supabase via S3 and display it as a data URL
+                        # Old code used open() on a local file; remove that.
                         images = current_card.get('images', [])
                         img_info = images[0] if images else None
 
                         image_html = ""
                         if st.session_state.revealed and img_info:
                             try:
-                                # Get the image filename stored in the flashcard JSON. For example, "Praktikumsvertrag (Deutsch)_page_2.png"
-                                image_filename = img_info.get("path")
-                                # Use the helper function to fetch the image bytes from S3 and return a data URL.
-                                data_url = get_image_as_data_url(selected_fach, image_filename)
-                                # Optionally URL-encode the data URL if needed.
-                                encoded_url = urllib.parse.quote(data_url, safe=":/?&=,+")
-                                image_html = (
-                                    f'<div class="flashcard-image" style="margin-top: 20px;">'
-                                    f'<img src="{encoded_url}" style="max-width: 100%;">'
-                                    f'<p style="text-align: center; font-style: italic;">Kontext (Seite {img_info.get("page", "N/A")})</p>'
-                                    f'</div>'
-                                )
+                                # Check if the flashcard contains the base64 image data
+                                base64_img = img_info.get("base64")
+                                if base64_img:
+                                    # Construct a data URL that Streamlit can render
+                                    data_url = f"data:image/png;base64,{base64_img}"
+                                    image_html = (
+                                        f'<div class="flashcard-image" style="margin-top: 20px;">'
+                                        f'<img src="{data_url}" style="max-width: 100%;">'
+                                        f'<p style="text-align: center; font-style: italic;">Kontext (Seite {img_info.get("page", "N/A")})</p>'
+                                        f'</div>'
+                                    )
+                                else:
+                                    image_html = "<div class='flashcard-image' style='margin-top: 20px;'>Kein Bild vorhanden.</div>"
                             except Exception as e:
                                 st.error(f"Error displaying image: {e}")
 
@@ -821,6 +816,7 @@ elif view_mode == "Learning Studio":
                             {image_html}
                         </div>
                         """, unsafe_allow_html=True)
+
 
                     else:
                         # Editing mode: show a form to edit the flashcard
