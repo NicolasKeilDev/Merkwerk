@@ -12,7 +12,8 @@ client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 def generate_card_from_text(text, upload_name, page_number):
     prompt = f"""
     Erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil aus dem folgenden Textauszug.
-    Die Antwort sollte eine Liste von Aufzählungspunkten sein. Erkläre Fachbegriffe. Schreibe in einfacher und simpler Sprache.
+    Die Antwort sollte eine Liste von Aufzählungspunkten sein. Erkläre alle Fachbegriffe und alle Themenbezogene Begriffe immer. 
+    Schreibe in einfacher und simpler Sprache.
     Dokument: {upload_name}
     
     Text:
@@ -81,6 +82,7 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
     prompt = f"""
     Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
     Die Antwort sollte aus einer Liste von Stichpunkten bestehen, die die wichtigsten sichtbaren Informationen zusammenfassen.
+    Erkläre alle Fachbegriffe und alle Themenbezogene Begriffe immer.
     Dokument: {upload_name}
 
     Erstelle eine präzise, aber umfassende Frage, die das Hauptthema der Folie abdeckt.
