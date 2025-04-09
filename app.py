@@ -371,71 +371,67 @@ if view_mode == "Creator Studio":
 
             # Process flashcard creation
             if create_flashcards:
-                # Save the selection in session state immediately on change (handled by Streamlit)
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
-                # Reset potential mindmap display state if generating cards
-                # (Add state management for this if needed, e.g., st.session_state.mindmap_html = None)
                 with st.spinner("GPT erstellt Lernkarten..."):
-                    image_pages = st.session_state.image_recognition_pages.get(file_name, [])
+                    # First, retrieve existing flashcards (if any)
+                    existing_flashcards = get_flashcards(selected_fach)
+                    
+                    # Optionally, remove flashcards belonging to the document you're re-processing
+                    # (in case you want to replace them rather than append duplicate entries)
+                    merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
+                    
+                    # Process the current document and generate new flashcards
                     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-
-                    all_flashcards = []
+                    new_flashcards = []
                     progress_bar = st.progress(0)
                     
                     for page_num in range(doc.page_count):
                         page = doc[page_num]
                         page_num_human = page_num + 1
                         
-                        # Skip excluded pages
                         if page_num_human in st.session_state.excluded_pages.get(file_name, []):
                             progress_value = (page_num + 1) / doc.page_count
                             progress_bar.progress(progress_value)
                             continue
                         
                         try:
-                            if page_num_human in image_pages:
-                                # Get the pixmap from the PDF page
+                            if page_num_human in st.session_state.image_recognition_pages.get(file_name, []):
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                                # Instead of saving a JPEG to Supabase storage, convert directly to base64
                                 base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
                                 
-                                # Now call the new function that uses the base64 image
                                 gpt_output = analyze_image_for_flashcard_base64(
-                                    base64_image,      # Pass the base64 string directly
-                                    file_name,         # Document name
+                                    base64_image,
+                                    file_name,
                                     page_number=page_num_human
                                 )
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
-                                    # Initialize the priority field if it's not provided by GPT (default "Mittel" = 2)
                                     if "priority" not in flashcard:
-                                        flashcard["priority"] = 2
-
-                                    # Instead of storing a URL or file name, store the base64 string in the flashcard
+                                        flashcard["priority"] = 2  # default value
+                                    # Store base64 image data in flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
-                                        "base64": base64_image  # Use a key "base64" here
+                                        "base64": base64_image
                                     }]
-                                    all_flashcards.append(flashcard)
+                                    new_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
                                     st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
                                     st.code(gpt_output, language="json")
-
-
                             else:
-                                # Process as text (existing flow)
                                 page_text = page.get_text()
                                 if page_text.strip():
                                     gpt_output = generate_card_from_text(
-                                        page_text, 
+                                        page_text,
                                         file_name,
                                         page_number=page_num_human
                                     )
                                     
                                     try:
                                         flashcard = json.loads(gpt_output)
-                                        all_flashcards.append(flashcard)
+                                        if "priority" not in flashcard:
+                                            flashcard["priority"] = 2  # default value
+                                        new_flashcards.append(flashcard)
                                     except json.JSONDecodeError as e:
                                         st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
                                         st.code(gpt_output, language="json")
@@ -445,11 +441,14 @@ if view_mode == "Creator Studio":
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    update_flashcards(selected_fach, all_flashcards)
+                    # Merge existing flashcards with the new ones
+                    merged_flashcards.extend(new_flashcards)
                     
-                    st.success(f"{len(all_flashcards)} Lernkarten wurden erstellt!")
+                    update_flashcards(selected_fach, merged_flashcards)
+                    
+                    st.success(f"{len(new_flashcards)} neue Lernkarten wurden erstellt und hinzugefügt!")
                     st.rerun()
-        
+
             # Create mindmap button
             mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
 
