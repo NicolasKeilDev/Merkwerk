@@ -408,6 +408,10 @@ if view_mode == "Creator Studio":
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
+                                    # Initialize the priority field if it's not provided by GPT (default "Mittel" = 2)
+                                    if "priority" not in flashcard:
+                                        flashcard["priority"] = 2
+
                                     # Instead of storing a URL or file name, store the base64 string in the flashcard
                                     flashcard["images"] = [{
                                         "page": page_num_human,
@@ -417,6 +421,7 @@ if view_mode == "Creator Studio":
                                 except json.JSONDecodeError as e:
                                     st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
                                     st.code(gpt_output, language="json")
+
 
                             else:
                                 # Process as text (existing flow)

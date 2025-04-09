@@ -36,7 +36,7 @@ def create_fach(name):
     Creates a new fach folder with subfolders and a flashcard.js file.
     """
     # Create subfolders: uploads, images, mindmaps by uploading a placeholder file
-    for subfolder in ["uploads", "images", "mindmaps"]:
+    for subfolder in ["uploads", "mindmaps"]:
         placeholder_path = f"{name}/{subfolder}/placeholder.txt"
         try:
             supabase.storage.from_(bucket_name).upload(placeholder_path, "".encode("utf-8"))
