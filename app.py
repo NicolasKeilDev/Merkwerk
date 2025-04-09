@@ -73,7 +73,7 @@ st.title("Merkwerk")
 
 # Initialize the view mode in session state if it doesn't exist
 if 'view_mode' not in st.session_state:
-    st.session_state.view_mode = 'Creator Studio'
+    st.session_state.view_mode = 'Learning Studio'
 
 # Create columns for the buttons
 col1, col2 = st.columns(2)
