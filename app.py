@@ -155,14 +155,13 @@ def save_mindmap_html(html_content, filename):
 def generate_anki_package(deck_name, flashcards):
     """
     Generate an Anki package (.apkg) from a list of flashcard dictionaries.
-    Each flashcard should have 'question' and 'answer'.
-    Optionally, a flashcard may have:
-      - 'image_base64': a base64 string (for an image to embed).
-      - 'mindmap': True (indicating the answer contains HTML for a mindmap).
+    Each flashcard must have 'question' and 'answer'. Optionally, it may contain:
+      - 'image_base64': a base64 string for an image (used for both regular images and mindmap images).
+      - 'mindmap': True to mark the flashcard as created from a mindmap.
     """
-    # Define a simple Anki model with two fields and custom CSS for better fonts.
+    # Define a simple Anki model with custom CSS that removes the white background.
     my_model = genanki.Model(
-        1607392319,  # Unique model ID
+        1607392319,  # Use a unique model ID
         'Simple Model',
         fields=[{'name': 'Question'}, {'name': 'Answer'}],
         templates=[{
@@ -175,41 +174,34 @@ def generate_anki_package(deck_name, flashcards):
     font-family: 'Calibri', sans-serif;
     font-size: 20px;
     color: #333;
-    background-color: #fff;
+    background-color: transparent;
     padding: 10px;
     margin: 10px;
-    border: 1px solid #ccc;
+    border: none;
 }
 """
     )
     
-    # Create a deck with a random deck ID and use the provided deck name.
+    # Create a deck with a random deck ID.
     deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
     
-    media_files = []  # List to hold image files only
+    media_files = []  # This list will hold all image files that need to be bundled.
     
     for idx, card in enumerate(flashcards):
         question = card.get("question", "")
-        
-        # Assemble the answer: if it's a list, join items with <br>
+        # Build the answer content.
         answer_raw = card.get("answer", "")
         if isinstance(answer_raw, list):
             answer_text = "<br>".join(answer_raw)
         else:
             answer_text = answer_raw
         
-        # If the card contains a base64 image, save it as a file and embed via <img>
+        # If the card has an image (including mindmap image), embed it.
         if "image_base64" in card:
             image_filename = f"flashcard_{idx}_image.png"
             save_image_from_base64(card["image_base64"], image_filename)
             media_files.append(image_filename)
             answer_text += f"<br><img src='{image_filename}' />"
-        
-        # For mindmap flashcards, we now expect answer_text to already be the full HTML.
-        # We do not save an extra file in media_files.
-        if card.get("mindmap", False):
-            # Do nothing – answer_text remains the full HTML.
-            pass
         
         note = genanki.Note(
             model=my_model,
@@ -456,137 +448,132 @@ if view_mode == "Creator Studio":
             # Combined flashcard and mindmap creation (replace the separate create_flashcards and mindmap_btn blocks)
             # ------------------------------
 
-            # Let the user enter a deck name (if not already provided)
-            if "deck_name" not in st.session_state:
-                st.session_state.deck_name = ""
-            st.session_state.deck_name = st.text_input(
-                "Bitte geben Sie den Namen des Anki-Decks ein:",
-                value=st.session_state.deck_name,
-                key="anki_deck_name"
-            )
+# Let the user enter a deck name if not already provided.
+if "deck_name" not in st.session_state:
+    st.session_state.deck_name = ""
+st.session_state.deck_name = st.text_input(
+    "Bitte geben Sie den Namen des Anki-Decks ein:",
+    value=st.session_state.deck_name,
+    key="anki_deck_name"
+)
 
-            if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
-                st.session_state.image_recognition_pages[file_name] = temp_selected_pages
-                with st.spinner("Erstelle Lernkarten und Mindmap..."):
-                    # ---------- Step 1: Generate New Flashcards Only ----------
-                    new_flashcards = []  # Only new flashcards will be generated and exported.
-                    progress_bar = st.progress(0)
-                    
-                    for page_num in range(doc.page_count):
-                        page = doc[page_num]
-                        page_num_human = page_num + 1
-                        # Calculate flashcard progress scaled to 50%
-                        current_progress = ((page_num + 1) / doc.page_count) * 0.5
-                        if page_num_human in st.session_state.excluded_pages.get(file_name, []):
-                            progress_bar.progress(current_progress)
-                            continue
-                        
-                        try:
-                            if page_num_human in st.session_state.image_recognition_pages.get(file_name, []):
-                                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                                base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
-                                gpt_output = analyze_image_for_flashcard_base64(base64_image, file_name, page_number=page_num_human)
-                                try:
-                                    flashcard = json.loads(gpt_output)
-                                    if "priority" not in flashcard:
-                                        flashcard["priority"] = 2
-                                    # Save image in the flashcard for export.
-                                    flashcard["image_base64"] = base64_image  
-                                    new_flashcards.append(flashcard)
-                                except json.JSONDecodeError as e:
-                                    st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
-                                    st.code(gpt_output, language="json")
-                            else:
-                                page_text = page.get_text()
-                                if page_text.strip():
-                                    gpt_output = generate_card_from_text(page_text, file_name, page_number=page_num_human)
-                                    try:
-                                        flashcard = json.loads(gpt_output)
-                                        if "priority" not in flashcard:
-                                            flashcard["priority"] = 2
-                                        new_flashcards.append(flashcard)
-                                    except json.JSONDecodeError as e:
-                                        st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
-                                        st.code(gpt_output, language="json")
-                                        
-                            progress_bar.progress(current_progress)
-                        except Exception as e:
-                            st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
-                    
-                    # No merging with existing flashcards—export only new ones.
-                    export_flashcards = new_flashcards.copy()
-                    progress_bar.progress(0.5)  # Flashcards processing complete.
-                    
-                    # ---------- Step 2: Generate the Mindmap ----------
+if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
+    st.session_state.image_recognition_pages[file_name] = temp_selected_pages
+    with st.spinner("Erstelle Lernkarten und Mindmap..."):
+        # ---------- Step 1: Generate New Flashcards Only ----------
+        new_flashcards = []  # Only new flashcards are generated.
+        progress_bar = st.progress(0)
+        
+        for page_num in range(doc.page_count):
+            page = doc[page_num]
+            page_num_human = page_num + 1
+            # Compute progress scaled to 50% (for flashcards).
+            current_progress = ((page_num + 1) / doc.page_count) * 0.5
+            if page_num_human in st.session_state.excluded_pages.get(file_name, []):
+                progress_bar.progress(current_progress)
+                continue
+            
+            try:
+                if page_num_human in st.session_state.image_recognition_pages.get(file_name, []):
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
+                    gpt_output = analyze_image_for_flashcard_base64(base64_image, file_name, page_number=page_num_human)
                     try:
-                        import io
-                        from pathlib import Path
-                        pdf_stream = io.BytesIO(pdf_bytes)
-                        content = extract_content_from_pdf(
-                            pdf_stream, 
-                            image_pages=st.session_state.image_recognition_pages.get(file_name, []),
-                            excluded_pages=st.session_state.excluded_pages.get(file_name, [])
-                        )
-                        full_text = content["text"]
-                        mindmap_json = generate_mindmap_from_text(full_text, file_name)
-                        mindmap_data = json.loads(mindmap_json)
-                        
-                        from pyvis.network import Network
-                        net = Network(height="600px", width="100%", directed=True, notebook=False)
-                        for node in mindmap_data["nodes"]:
-                            net.add_node(node, label=node)
-                        for edge in mindmap_data["edges"]:
-                            net.add_edge(edge[0], edge[1])
-                        
-                        # Generate the mindmap HTML from pyvis.
-                        mindmap_html = net.generate_html()
-                        
-                        # Inject custom CSS into the mindmap HTML to improve background and font.
-                        custom_style = """
-            <style>
-            body {
-                background-color: #f0f0f0; /* Light grey background */
-                margin: 0;
-                padding: 10px;
+                        flashcard = json.loads(gpt_output)
+                        if "priority" not in flashcard:
+                            flashcard["priority"] = 2
+                        # Store the image for this flashcard.
+                        flashcard["image_base64"] = base64_image  
+                        new_flashcards.append(flashcard)
+                    except json.JSONDecodeError as e:
+                        st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
+                        st.code(gpt_output, language="json")
+                else:
+                    page_text = page.get_text()
+                    if page_text.strip():
+                        gpt_output = generate_card_from_text(page_text, file_name, page_number=page_num_human)
+                        try:
+                            flashcard = json.loads(gpt_output)
+                            if "priority" not in flashcard:
+                                flashcard["priority"] = 2
+                            new_flashcards.append(flashcard)
+                        except json.JSONDecodeError as e:
+                            st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
+                            st.code(gpt_output, language="json")
+                            
+                progress_bar.progress(current_progress)
+            except Exception as e:
+                st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
+        
+        export_flashcards = new_flashcards.copy()  # Only new flashcards.
+        progress_bar.progress(0.5)  # Flashcards generated.
+        
+        # ---------- Step 2: Generate the Mindmap ----------
+        try:
+            import io
+            from pathlib import Path
+            # Extract full text.
+            pdf_stream = io.BytesIO(pdf_bytes)
+            content = extract_content_from_pdf(
+                pdf_stream, 
+                image_pages=st.session_state.image_recognition_pages.get(file_name, []),
+                excluded_pages=st.session_state.excluded_pages.get(file_name, [])
+            )
+            full_text = content["text"]
+            mindmap_json = generate_mindmap_from_text(full_text, file_name)
+            mindmap_data = json.loads(mindmap_json)
+            
+            from pyvis.network import Network
+            net = Network(height="600px", width="100%", directed=True, notebook=False)
+            for node in mindmap_data["nodes"]:
+                net.add_node(node, label=node)
+            for edge in mindmap_data["edges"]:
+                net.add_edge(edge[0], edge[1])
+            
+            # Generate HTML from pyvis.
+            mindmap_html = net.generate_html()
+            
+            # (Optionally you can inject custom CSS if needed, but now we will convert to an image.)
+            # Convert the HTML to an image using imgkit.
+            import imgkit
+            document_title = Path(file_name).stem
+            mindmap_image_filename = f"{document_title}_mindmap.png"
+            imgkit_options = {"format": "png"}
+            imgkit.from_string(mindmap_html, mindmap_image_filename, options=imgkit_options)
+            st.success("✅ Mindmap wurde erstellt und in ein Bild umgewandelt!")
+            
+            # Read the generated image and encode it as base64.
+            with open(mindmap_image_filename, "rb") as img_file:
+                mindmap_base64 = base64.b64encode(img_file.read()).decode('utf-8')
+            
+            # ---------- Step 3: Create a Mindmap Flashcard ----------
+            # The flashcard now stores the mindmap image in its "image_base64" field.
+            mindmap_flashcard = {
+                "question": f"Mindmap für {file_name}",
+                "image_base64": mindmap_base64,
+                "mindmap": True
             }
-            * {
-                font-family: 'Calibri', sans-serif;
-            }
-            </style>
-            """
-                        mindmap_html = mindmap_html.replace("</head>", custom_style + "</head>")
-                        
-                        st.success("✅ Mindmap wurde erstellt!")
-                        
-                        # ---------- Step 3: Create a Mindmap Flashcard ----------
-                        # Insert the fully-styled HTML directly into the flashcard.
-                        mindmap_flashcard = {
-                            "question": f"Mindmap für {file_name}",
-                            "answer": mindmap_html,
-                            "mindmap": True
-                        }
-                        export_flashcards.append(mindmap_flashcard)
-                        
-                        # Optionally update flashcards in your backend with just the new ones.
-                        update_flashcards(selected_fach, export_flashcards)
-                        
-                        # Set progress bar to 100% after mindmap generation.
-                        progress_bar.progress(1.0)
-                    except Exception as e:
-                        st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
-                        progress_bar.progress(0.5)  # Keep at 50% if mindmap creation fails.
-                    
-                    # ---------- Step 4: Generate the APKG File from the New Flashcards ----------
-                    if st.session_state.deck_name:
-                        apkg_bytes = generate_anki_package(st.session_state.deck_name, export_flashcards)
-                        st.download_button(
-                            label="Download Anki Deck (.apkg)",
-                            data=apkg_bytes,
-                            file_name=f"{st.session_state.deck_name}_flashcards.apkg",
-                            mime="application/octet-stream"
-                        )
-                    else:
-                        st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
+            export_flashcards.append(mindmap_flashcard)
+            
+            # Optionally update flashcards in your backend with just new flashcards.
+            update_flashcards(selected_fach, export_flashcards)
+            progress_bar.progress(1.0)
+        except Exception as e:
+            st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+            progress_bar.progress(0.5)
+        
+        # ---------- Step 4: Generate the APKG File from New Flashcards ----------
+        if st.session_state.deck_name:
+            apkg_bytes = generate_anki_package(st.session_state.deck_name, export_flashcards)
+            st.download_button(
+                label="Download Anki Deck (.apkg)",
+                data=apkg_bytes,
+                file_name=f"{st.session_state.deck_name}_flashcards.apkg",
+                mime="application/octet-stream"
+            )
+        else:
+            st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
+
 
 
                         
