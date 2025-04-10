@@ -444,23 +444,25 @@ if view_mode == "Creator Studio":
                 default=st.session_state.image_recognition_pages.get(file_name, [])
             )
 
-
-
+            # ------------------------------
             # Combined flashcard and mindmap creation (replace the separate create_flashcards and mindmap_btn blocks)
+            # ------------------------------
 
-            # Let the user enter a deck name (if not already provided).
+            # Let the user enter a deck name (if not already provided)
             if "deck_name" not in st.session_state:
                 st.session_state.deck_name = ""
-            st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", 
-                                                        value=st.session_state.deck_name, 
-                                                        key="anki_deck_name")
+            st.session_state.deck_name = st.text_input(
+                "Bitte geben Sie den Namen des Anki-Decks ein:",
+                value=st.session_state.deck_name,
+                key="anki_deck_name"
+            )
 
             if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
                 with st.spinner("Erstelle Lernkarten und Mindmap..."):
                     # ---------- Step 1: Generate Flashcards ----------
                     existing_flashcards = get_flashcards(selected_fach) or []
-                    # Filter out flashcards for the currently processed document if needed.
+                    # Filter out flashcards from the current document (if needed)
                     merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
                     new_flashcards = []
                     progress_bar = st.progress(0)
@@ -468,8 +470,10 @@ if view_mode == "Creator Studio":
                     for page_num in range(doc.page_count):
                         page = doc[page_num]
                         page_num_human = page_num + 1
+                        # Update progress proportional to flashcard generation (scales to 50% of overall progress)
+                        current_progress = ((page_num + 1) / doc.page_count) * 0.5
                         if page_num_human in st.session_state.excluded_pages.get(file_name, []):
-                            progress_bar.progress((page_num + 1) / doc.page_count * 0.5)  # Scale to 50%
+                            progress_bar.progress(current_progress)
                             continue
                         
                         try:
@@ -481,6 +485,7 @@ if view_mode == "Creator Studio":
                                     flashcard = json.loads(gpt_output)
                                     if "priority" not in flashcard:
                                         flashcard["priority"] = 2
+                                    # Store the image in the flashcard for APKG generation.
                                     flashcard["image_base64"] = base64_image  
                                     new_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
@@ -499,11 +504,13 @@ if view_mode == "Creator Studio":
                                         st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
                                         st.code(gpt_output, language="json")
                                         
-                            progress_bar.progress((page_num + 1) / doc.page_count * 0.5)  # Scale progress to 50% after flashcards.
+                            progress_bar.progress(current_progress)
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
                     merged_flashcards.extend(new_flashcards)
+                    # ---------- Step 1 Complete: Flashcards processing now at ~50% ----------
+                    progress_bar.progress(0.5)
                     
                     # ---------- Step 2: Generate the Mindmap ----------
                     try:
@@ -528,18 +535,13 @@ if view_mode == "Creator Studio":
                         
                         # Generate the mindmap HTML.
                         mindmap_html = net.generate_html()
+                        # Optional: You can wrap the HTML in a <div> if needed for styling.
+                        # mindmap_html = f"<div>{mindmap_html}</div>"
                         
-                        # Optionally, upload mindmap to Supabase (if desired).
-                        document_title = Path(file_name).stem
-                        mindmap_filename = f"{document_title}_mindmap.html"
-                        supabase.storage.from_(bucket_name).upload(
-                            f"{selected_fach}/mindmaps/{mindmap_filename}", 
-                            mindmap_html.encode("utf-8")
-                        )
-                        st.success("✅ Mindmap wurde erstellt und hochgeladen!")
+                        st.success("✅ Mindmap wurde erstellt!")
                         
                         # ---------- Step 3: Create a Mindmap Flashcard ----------
-                        # Instead of linking, we display the full HTML content directly.
+                        # Instead of a link, the full HTML is placed in the answer.
                         mindmap_flashcard = {
                             "question": f"Mindmap für {file_name}",
                             "answer": mindmap_html,
@@ -547,14 +549,14 @@ if view_mode == "Creator Studio":
                         }
                         merged_flashcards.append(mindmap_flashcard)
                         
-                        # Update flashcards in your backend if needed.
+                        # Optionally update flashcards in your backend.
                         update_flashcards(selected_fach, merged_flashcards)
                         
-                        # Set progress bar to full after mindmap is ready.
+                        # ---------- Update progress to 100%
                         progress_bar.progress(1.0)
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
-                        # Keep progress at 50% if mindmap not created.
+                        # Keep progress at 50% if mindmap creation fails.
                         progress_bar.progress(0.5)
                     
                     # ---------- Step 4: Generate the APKG File ----------
@@ -568,8 +570,6 @@ if view_mode == "Creator Studio":
                         )
                     else:
                         st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
-
-
 
                         
 
