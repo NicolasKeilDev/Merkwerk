@@ -154,68 +154,52 @@ def save_mindmap_html(html_content, filename):
 
 def generate_anki_package(deck_name, flashcards):
     """
-    Generate an Anki package (.apkg) from a list of flashcard dictionaries.
-    Each flashcard should have 'question' and 'answer'.
-    Optionally, a flashcard may include:
-      - 'image_base64': a base64 string for an image.
-      - 'mindmap': True to indicate this flashcard contains a mindmap.
-    For mindmap flashcards, the HTML content is saved as a separate file and a link is added to the answer.
+    Generate an Anki package (.apkg) from flashcards.
+    For flashcards with an 'image_base64', the image is saved and embedded.
+    For flashcards with 'mindmap': True, the HTML is saved as a media file and a link is added.
     """
-    # Define a simple Anki model with custom CSS without a white background.
+    # Minimal Anki model with no extra cosmetic design.
     my_model = genanki.Model(
-        1607392319,  # unique model ID
-        'Simple Model',
+        1607392319,  # Unique model ID – change if necessary to avoid collisions.
+        'Minimal Model',
         fields=[{'name': 'Question'}, {'name': 'Answer'}],
         templates=[{
             'name': 'Card 1',
-            'qfmt': '<div class="card">{{Question}}</div>',
-            'afmt': '<div class="card">{{FrontSide}}<hr id="answer">{{Answer}}</div>',
+            'qfmt': '{{Question}}',
+            'afmt': '{{FrontSide}}<hr>{{Answer}}',
         }],
         css="""
-.card {
-    font-family: 'Calibri', sans-serif;
-    font-size: 20px;
-    color: #333;
-    /* Removed background-color or set transparent */
-    background-color: transparent;
-    padding: 10px;
-    margin: 10px;
-    border: 1px solid #ccc;
-}
+/* Minimal styling */
+body { font-family: sans-serif; }
 """
     )
     
-    # Create the deck.
     deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
-    
-    media_files = []  # For images and attached HTML files.
+    media_files = []  # Will hold filenames of images and mindmap HTML.
     
     for idx, card in enumerate(flashcards):
         question = card.get("question", "")
-        
-        # Assemble the answer text.
         answer_raw = card.get("answer", "")
         if isinstance(answer_raw, list):
             answer_text = "<br>".join(answer_raw)
         else:
             answer_text = answer_raw
         
-        # If there is an image, save it as a media file and embed in answer.
+        # If the card has a base64 image, write it to a file.
         if "image_base64" in card:
             image_filename = f"flashcard_{idx}_image.png"
             save_image_from_base64(card["image_base64"], image_filename)
             media_files.append(image_filename)
             answer_text += f"<br><img src='{image_filename}' />"
         
-        # For mindmap flashcards: save the HTML as a separate file and add a hyperlink.
+        # For mindmap flashcards, save the HTML as a media file and add a hyperlink.
         if card.get("mindmap", False):
-            # Use a unique filename for the mindmap HTML.
             mindmap_filename = f"mindmap_{idx}.html"
             with open(mindmap_filename, "w", encoding="utf-8") as f:
                 f.write(answer_text)  # answer_text here is the mindmap HTML.
             media_files.append(mindmap_filename)
-            # Set the answer as a link to the HTML file.
-            answer_text = f"Mindmap verfügbar: <a href='{mindmap_filename}'>Öffne Mindmap</a>"
+            # Use an absolute URI so that Anki finds the file in its media folder.
+            answer_text = f"Mindmap verfügbar: <a href='anki://_media/{mindmap_filename}' target='_blank'>Öffne Mindmap</a>"
         
         note = genanki.Note(
             model=my_model,
@@ -457,6 +441,7 @@ if view_mode == "Creator Studio":
                 options=list(range(1, page_count + 1)),
                 default=st.session_state.image_recognition_pages.get(file_name, [])
             )
+            
 
             # Let the user enter a deck name if not already provided.
             if "deck_name" not in st.session_state:
@@ -540,11 +525,11 @@ if view_mode == "Creator Studio":
                         # Generate the mindmap HTML.
                         mindmap_html = net.generate_html()
                         
-                        # (Optional) Inject custom CSS into the mindmap HTML to change font/background in the file.
+                        # Inject custom CSS into the mindmap HTML (if desired).
                         custom_style = """
             <style>
             body {
-                background-color: #f0f0f0; /* for example, a light grey background */
+                background-color: #f0f0f0; /* Light grey background */
                 margin: 0;
                 padding: 10px;
             }
@@ -558,16 +543,15 @@ if view_mode == "Creator Studio":
                         st.success("✅ Mindmap wurde erstellt!")
                         
                         # ---------- Step 3: Create a Mindmap Flashcard ----------
-                        # Instead of embedding the mindmap HTML in the card,
-                        # we will attach the HTML file and show a link.
+                        # Instead of embedding the mindmap HTML, attach it as a media file.
                         mindmap_flashcard = {
                             "question": f"Mindmap für {file_name}",
-                            "answer": mindmap_html,  # This HTML will be saved as a separate file in generate_anki_package.
+                            "answer": mindmap_html,  # This HTML will be saved as a separate media file.
                             "mindmap": True
                         }
                         export_flashcards.append(mindmap_flashcard)
                         
-                        # Optionally update flashcards in your backend using export_flashcards.
+                        # Optionally update flashcards in your backend with the new ones.
                         update_flashcards(selected_fach, export_flashcards)
                         
                         progress_bar.progress(1.0)
