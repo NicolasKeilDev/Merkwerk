@@ -155,14 +155,14 @@ def save_mindmap_html(html_content, filename):
 def generate_anki_package(deck_name, flashcards):
     """
     Generate an Anki package (.apkg) from a list of flashcard dictionaries.
-    Each flashcard should be a dict with at least: 'question' and 'answer'.
-    Optionally, it may have:
-      - 'image_base64' : a base64 string (for an image to embed).
-      - 'mindmap': True (to indicate that answer contains HTML for a mindmap).
+    Each flashcard should have 'question' and 'answer'.
+    Optionally, a flashcard may have:
+      - 'image_base64' : a base64 string for an image.
+      - 'mindmap': True, indicating that the answer contains HTML for a mindmap.
     """
     # Define a simple Anki model with two fields.
     my_model = genanki.Model(
-        1607392319,  # unique model ID (choose a random int)
+        1607392319,  # unique model ID
         'Simple Model',
         fields=[{'name': 'Question'}, {'name': 'Answer'}],
         templates=[{
@@ -175,47 +175,41 @@ def generate_anki_package(deck_name, flashcards):
     # Create a deck with a random deck ID.
     deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
     
-    media_files = []  # List to hold paths of media files
+    media_files = []  # To hold image files only
     
     # Process each flashcard.
     for idx, card in enumerate(flashcards):
         question = card.get("question", "")
         
         # Build the answer content.
-        # If the answer is a list (e.g., points), join them with <br>.
         answer_raw = card.get("answer", "")
         if isinstance(answer_raw, list):
             answer_text = "<br>".join(answer_raw)
         else:
             answer_text = answer_raw
         
-        # If the card contains a base64 image, save it and add an <img> tag.
+        # If the card contains a base64 image, save the image as a file.
         if "image_base64" in card:
             image_filename = f"flashcard_{idx}_image.png"
             save_image_from_base64(card["image_base64"], image_filename)
             media_files.append(image_filename)
             answer_text += f"<br><img src='{image_filename}' />"
         
-        # If the card is the mindmap card, write its HTML content.
+        # For mindmap flashcards, we now display the HTML directly
+        # without saving an extra file to media_files.
         if card.get("mindmap", False):
-            # In this case, the answer contains the HTML for the mindmap.
-            mindmap_filename = "mindmap.html"  # or use a unique name
-            save_mindmap_html(answer_text, mindmap_filename)
-            media_files.append(mindmap_filename)
-            # Replace the answer with a link for a cleaner display.
-            answer_text = f"Mindmap available: <a href='{mindmap_filename}'>Open Mindmap</a>"
+            # Do not save a separate media file;
+            # answer_text is already the full HTML.
+            pass  # Simply leave answer_text unchanged.
         
-        # Create a note with question and answer.
         note = genanki.Note(
             model=my_model,
             fields=[question, answer_text]
         )
         deck.add_note(note)
     
-    # Create the Anki package including all media files.
+    # Create the package.
     package = genanki.Package(deck, media_files=media_files)
-    
-    # Write the APKG file to a temporary file and return its bytes.
     with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as tmp:
         package.write_to_file(tmp.name)
         tmp.seek(0)
@@ -454,17 +448,19 @@ if view_mode == "Creator Studio":
 
             # Combined flashcard and mindmap creation (replace the separate create_flashcards and mindmap_btn blocks)
 
-            # Let the user enter a deck name if not already provided.
+            # Let the user enter a deck name (if not already provided).
             if "deck_name" not in st.session_state:
                 st.session_state.deck_name = ""
-            st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=st.session_state.deck_name, key="anki_deck_name")
+            st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", 
+                                                        value=st.session_state.deck_name, 
+                                                        key="anki_deck_name")
 
             if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
                 with st.spinner("Erstelle Lernkarten und Mindmap..."):
                     # ---------- Step 1: Generate Flashcards ----------
                     existing_flashcards = get_flashcards(selected_fach) or []
-                    # Filter out flashcards coming from the currently processed document if needed
+                    # Filter out flashcards for the currently processed document if needed.
                     merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
                     new_flashcards = []
                     progress_bar = st.progress(0)
@@ -473,11 +469,10 @@ if view_mode == "Creator Studio":
                         page = doc[page_num]
                         page_num_human = page_num + 1
                         if page_num_human in st.session_state.excluded_pages.get(file_name, []):
-                            progress_bar.progress((page_num + 1) / doc.page_count)
+                            progress_bar.progress((page_num + 1) / doc.page_count * 0.5)  # Scale to 50%
                             continue
                         
                         try:
-                            # For pages flagged for image recognition:
                             if page_num_human in st.session_state.image_recognition_pages.get(file_name, []):
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
@@ -504,11 +499,10 @@ if view_mode == "Creator Studio":
                                         st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
                                         st.code(gpt_output, language="json")
                                         
-                            progress_bar.progress((page_num + 1) / doc.page_count)
+                            progress_bar.progress((page_num + 1) / doc.page_count * 0.5)  # Scale progress to 50% after flashcards.
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    # Merge the new flashcards with existing ones.
                     merged_flashcards.extend(new_flashcards)
                     
                     # ---------- Step 2: Generate the Mindmap ----------
@@ -532,9 +526,10 @@ if view_mode == "Creator Studio":
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
                         
+                        # Generate the mindmap HTML.
                         mindmap_html = net.generate_html()
                         
-                        # Optionally, upload the mindmap HTML to Supabase.
+                        # Optionally, upload mindmap to Supabase (if desired).
                         document_title = Path(file_name).stem
                         mindmap_filename = f"{document_title}_mindmap.html"
                         supabase.storage.from_(bucket_name).upload(
@@ -544,17 +539,23 @@ if view_mode == "Creator Studio":
                         st.success("✅ Mindmap wurde erstellt und hochgeladen!")
                         
                         # ---------- Step 3: Create a Mindmap Flashcard ----------
+                        # Instead of linking, we display the full HTML content directly.
                         mindmap_flashcard = {
                             "question": f"Mindmap für {file_name}",
-                            "answer": f"Mindmap verfügbar: <a href='{mindmap_filename}'>Öffne Mindmap</a>",
+                            "answer": mindmap_html,
                             "mindmap": True
                         }
                         merged_flashcards.append(mindmap_flashcard)
                         
-                        # Optionally update flashcards in your backend:
+                        # Update flashcards in your backend if needed.
                         update_flashcards(selected_fach, merged_flashcards)
+                        
+                        # Set progress bar to full after mindmap is ready.
+                        progress_bar.progress(1.0)
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+                        # Keep progress at 50% if mindmap not created.
+                        progress_bar.progress(0.5)
                     
                     # ---------- Step 4: Generate the APKG File ----------
                     if st.session_state.deck_name:
@@ -567,6 +568,7 @@ if view_mode == "Creator Studio":
                         )
                     else:
                         st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
+
 
 
                         
