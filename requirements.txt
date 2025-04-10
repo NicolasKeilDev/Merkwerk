@@ -6,3 +6,4 @@ python-dotenv
 pyvis
 boto3
 genanki
+imgkit
