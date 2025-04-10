@@ -157,50 +157,59 @@ def generate_anki_package(deck_name, flashcards):
     Generate an Anki package (.apkg) from a list of flashcard dictionaries.
     Each flashcard should have 'question' and 'answer'.
     Optionally, a flashcard may have:
-      - 'image_base64' : a base64 string for an image.
-      - 'mindmap': True, indicating that the answer contains HTML for a mindmap.
+      - 'image_base64': a base64 string (for an image to embed).
+      - 'mindmap': True (indicating the answer contains HTML for a mindmap).
     """
-    # Define a simple Anki model with two fields.
+    # Define a simple Anki model with two fields and custom CSS for better fonts.
     my_model = genanki.Model(
-        1607392319,  # unique model ID
+        1607392319,  # Unique model ID
         'Simple Model',
         fields=[{'name': 'Question'}, {'name': 'Answer'}],
         templates=[{
             'name': 'Card 1',
-            'qfmt': '{{Question}}',
-            'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
-        }]
+            'qfmt': '<div class="card">{{Question}}</div>',
+            'afmt': '<div class="card">{{FrontSide}}<hr id="answer">{{Answer}}</div>',
+        }],
+        css="""
+.card {
+    font-family: 'Calibri', sans-serif;
+    font-size: 20px;
+    color: #333;
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #ccc;
+}
+"""
     )
     
-    # Create a deck with a random deck ID.
+    # Create a deck with a random deck ID and use the provided deck name.
     deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
     
-    media_files = []  # To hold image files only
+    media_files = []  # List to hold image files only
     
-    # Process each flashcard.
     for idx, card in enumerate(flashcards):
         question = card.get("question", "")
         
-        # Build the answer content.
+        # Assemble the answer: if it's a list, join items with <br>
         answer_raw = card.get("answer", "")
         if isinstance(answer_raw, list):
             answer_text = "<br>".join(answer_raw)
         else:
             answer_text = answer_raw
         
-        # If the card contains a base64 image, save the image as a file.
+        # If the card contains a base64 image, save it as a file and embed via <img>
         if "image_base64" in card:
             image_filename = f"flashcard_{idx}_image.png"
             save_image_from_base64(card["image_base64"], image_filename)
             media_files.append(image_filename)
             answer_text += f"<br><img src='{image_filename}' />"
         
-        # For mindmap flashcards, we now display the HTML directly
-        # without saving an extra file to media_files.
+        # For mindmap flashcards, we now expect answer_text to already be the full HTML.
+        # We do not save an extra file in media_files.
         if card.get("mindmap", False):
-            # Do not save a separate media file;
-            # answer_text is already the full HTML.
-            pass  # Simply leave answer_text unchanged.
+            # Do nothing – answer_text remains the full HTML.
+            pass
         
         note = genanki.Note(
             model=my_model,
@@ -208,7 +217,6 @@ def generate_anki_package(deck_name, flashcards):
         )
         deck.add_note(note)
     
-    # Create the package.
     package = genanki.Package(deck, media_files=media_files)
     with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as tmp:
         package.write_to_file(tmp.name)
@@ -460,17 +468,14 @@ if view_mode == "Creator Studio":
             if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
                 with st.spinner("Erstelle Lernkarten und Mindmap..."):
-                    # ---------- Step 1: Generate Flashcards ----------
-                    existing_flashcards = get_flashcards(selected_fach) or []
-                    # Filter out flashcards from the current document (if needed)
-                    merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
-                    new_flashcards = []
+                    # ---------- Step 1: Generate New Flashcards Only ----------
+                    new_flashcards = []  # Only new flashcards will be generated and exported.
                     progress_bar = st.progress(0)
                     
                     for page_num in range(doc.page_count):
                         page = doc[page_num]
                         page_num_human = page_num + 1
-                        # Update progress proportional to flashcard generation (scales to 50% of overall progress)
+                        # Calculate flashcard progress scaled to 50%
                         current_progress = ((page_num + 1) / doc.page_count) * 0.5
                         if page_num_human in st.session_state.excluded_pages.get(file_name, []):
                             progress_bar.progress(current_progress)
@@ -485,7 +490,7 @@ if view_mode == "Creator Studio":
                                     flashcard = json.loads(gpt_output)
                                     if "priority" not in flashcard:
                                         flashcard["priority"] = 2
-                                    # Store the image in the flashcard for APKG generation.
+                                    # Save image in the flashcard for export.
                                     flashcard["image_base64"] = base64_image  
                                     new_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
@@ -508,9 +513,9 @@ if view_mode == "Creator Studio":
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    merged_flashcards.extend(new_flashcards)
-                    # ---------- Step 1 Complete: Flashcards processing now at ~50% ----------
-                    progress_bar.progress(0.5)
+                    # No merging with existing flashcards—export only new ones.
+                    export_flashcards = new_flashcards.copy()
+                    progress_bar.progress(0.5)  # Flashcards processing complete.
                     
                     # ---------- Step 2: Generate the Mindmap ----------
                     try:
@@ -533,35 +538,47 @@ if view_mode == "Creator Studio":
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
                         
-                        # Generate the mindmap HTML.
+                        # Generate the mindmap HTML from pyvis.
                         mindmap_html = net.generate_html()
-                        # Optional: You can wrap the HTML in a <div> if needed for styling.
-                        # mindmap_html = f"<div>{mindmap_html}</div>"
+                        
+                        # Inject custom CSS into the mindmap HTML to improve background and font.
+                        custom_style = """
+            <style>
+            body {
+                background-color: #f0f0f0; /* Light grey background */
+                margin: 0;
+                padding: 10px;
+            }
+            * {
+                font-family: 'Calibri', sans-serif;
+            }
+            </style>
+            """
+                        mindmap_html = mindmap_html.replace("</head>", custom_style + "</head>")
                         
                         st.success("✅ Mindmap wurde erstellt!")
                         
                         # ---------- Step 3: Create a Mindmap Flashcard ----------
-                        # Instead of a link, the full HTML is placed in the answer.
+                        # Insert the fully-styled HTML directly into the flashcard.
                         mindmap_flashcard = {
                             "question": f"Mindmap für {file_name}",
                             "answer": mindmap_html,
                             "mindmap": True
                         }
-                        merged_flashcards.append(mindmap_flashcard)
+                        export_flashcards.append(mindmap_flashcard)
                         
-                        # Optionally update flashcards in your backend.
-                        update_flashcards(selected_fach, merged_flashcards)
+                        # Optionally update flashcards in your backend with just the new ones.
+                        update_flashcards(selected_fach, export_flashcards)
                         
-                        # ---------- Update progress to 100%
+                        # Set progress bar to 100% after mindmap generation.
                         progress_bar.progress(1.0)
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
-                        # Keep progress at 50% if mindmap creation fails.
-                        progress_bar.progress(0.5)
+                        progress_bar.progress(0.5)  # Keep at 50% if mindmap creation fails.
                     
-                    # ---------- Step 4: Generate the APKG File ----------
+                    # ---------- Step 4: Generate the APKG File from the New Flashcards ----------
                     if st.session_state.deck_name:
-                        apkg_bytes = generate_anki_package(st.session_state.deck_name, merged_flashcards)
+                        apkg_bytes = generate_anki_package(st.session_state.deck_name, export_flashcards)
                         st.download_button(
                             label="Download Anki Deck (.apkg)",
                             data=apkg_bytes,
@@ -570,6 +587,7 @@ if view_mode == "Creator Studio":
                         )
                     else:
                         st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
+
 
                         
 
