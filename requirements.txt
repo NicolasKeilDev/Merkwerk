@@ -5,3 +5,5 @@ openai
 python-dotenv
 pyvis
 boto3
+genanki
+tempfile

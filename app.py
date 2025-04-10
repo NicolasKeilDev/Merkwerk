@@ -6,6 +6,9 @@ import json
 import base64
 import fitz  # PyMuPDF
 import random 
+import genanki
+import tempfile
+import os
 
 import streamlit.components.v1 as components
 
@@ -16,7 +19,6 @@ from backend.flashcard_manager import save_flashcard, get_flashcards, update_fla
 from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
 import urllib.parse
-
 
 
 # --- Setup Supabase client using secrets ---
@@ -136,6 +138,90 @@ def select_next_card(cards):
 
     st.session_state.last_shown_index = chosen_index
     return chosen_index
+
+def save_image_from_base64(base64_str, filename):
+    """Decode the base64 string and write it as a file."""
+    image_data = base64.b64decode(base64_str)
+    with open(filename, "wb") as f:
+        f.write(image_data)
+    return filename
+
+def save_mindmap_html(html_content, filename):
+    """Write the HTML content for the mindmap to disk."""
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    return filename
+
+def generate_anki_package(deck_name, flashcards):
+    """
+    Generate an Anki package (.apkg) from a list of flashcard dictionaries.
+    Each flashcard should be a dict with at least: 'question' and 'answer'.
+    Optionally, it may have:
+      - 'image_base64' : a base64 string (for an image to embed).
+      - 'mindmap': True (to indicate that answer contains HTML for a mindmap).
+    """
+    # Define a simple Anki model with two fields.
+    my_model = genanki.Model(
+        1607392319,  # unique model ID (choose a random int)
+        'Simple Model',
+        fields=[{'name': 'Question'}, {'name': 'Answer'}],
+        templates=[{
+            'name': 'Card 1',
+            'qfmt': '{{Question}}',
+            'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
+        }]
+    )
+    
+    # Create a deck with a random deck ID.
+    deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
+    
+    media_files = []  # List to hold paths of media files
+    
+    # Process each flashcard.
+    for idx, card in enumerate(flashcards):
+        question = card.get("question", "")
+        
+        # Build the answer content.
+        # If the answer is a list (e.g., points), join them with <br>.
+        answer_raw = card.get("answer", "")
+        if isinstance(answer_raw, list):
+            answer_text = "<br>".join(answer_raw)
+        else:
+            answer_text = answer_raw
+        
+        # If the card contains a base64 image, save it and add an <img> tag.
+        if "image_base64" in card:
+            image_filename = f"flashcard_{idx}_image.png"
+            save_image_from_base64(card["image_base64"], image_filename)
+            media_files.append(image_filename)
+            answer_text += f"<br><img src='{image_filename}' />"
+        
+        # If the card is the mindmap card, write its HTML content.
+        if card.get("mindmap", False):
+            # In this case, the answer contains the HTML for the mindmap.
+            mindmap_filename = "mindmap.html"  # or use a unique name
+            save_mindmap_html(answer_text, mindmap_filename)
+            media_files.append(mindmap_filename)
+            # Replace the answer with a link for a cleaner display.
+            answer_text = f"Mindmap available: <a href='{mindmap_filename}'>Open Mindmap</a>"
+        
+        # Create a note with question and answer.
+        note = genanki.Note(
+            model=my_model,
+            fields=[question, answer_text]
+        )
+        deck.add_note(note)
+    
+    # Create the Anki package including all media files.
+    package = genanki.Package(deck, media_files=media_files)
+    
+    # Write the APKG file to a temporary file and return its bytes.
+    with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as tmp:
+        package.write_to_file(tmp.name)
+        tmp.seek(0)
+        apkg_bytes = tmp.read()
+    os.unlink(tmp.name)
+    return apkg_bytes
 
 
 if view_mode == "Creator Studio":
@@ -370,28 +456,25 @@ if view_mode == "Creator Studio":
             create_flashcards = st.button("Lernkarten erstellen", key="create_flashcards", use_container_width=True, icon=":material/article:") # Use container width for blocky look
 
             # Process flashcard creation
+            # ... within your "if create_flashcards:" block
+
             if create_flashcards:
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
                 with st.spinner("GPT erstellt Lernkarten..."):
-                    # First, retrieve existing flashcards (if any)
+                    # Retrieve existing flashcards (if any)
                     existing_flashcards = get_flashcards(selected_fach)
                     
-                    # Optionally, remove flashcards belonging to the document you're re-processing
-                    # (in case you want to replace them rather than append duplicate entries)
+                    # Remove flashcards for the re-processed document, if needed
                     merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
                     
-                    # Process the current document and generate new flashcards
-                    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
                     new_flashcards = []
                     progress_bar = st.progress(0)
                     
                     for page_num in range(doc.page_count):
                         page = doc[page_num]
                         page_num_human = page_num + 1
-                        
                         if page_num_human in st.session_state.excluded_pages.get(file_name, []):
-                            progress_value = (page_num + 1) / doc.page_count
-                            progress_bar.progress(progress_value)
+                            progress_bar.progress((page_num + 1) / doc.page_count)
                             continue
                         
                         try:
@@ -399,21 +482,14 @@ if view_mode == "Creator Studio":
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
                                 
-                                gpt_output = analyze_image_for_flashcard_base64(
-                                    base64_image,
-                                    file_name,
-                                    page_number=page_num_human
-                                )
+                                gpt_output = analyze_image_for_flashcard_base64(base64_image, file_name, page_number=page_num_human)
                                 
                                 try:
                                     flashcard = json.loads(gpt_output)
                                     if "priority" not in flashcard:
-                                        flashcard["priority"] = 2  # default value
-                                    # Store base64 image data in flashcard
-                                    flashcard["images"] = [{
-                                        "page": page_num_human,
-                                        "base64": base64_image
-                                    }]
+                                        flashcard["priority"] = 2
+                                    # Save image in a new field (you can later copy it to image_base64)
+                                    flashcard["image_base64"] = base64_image  
                                     new_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
                                     st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
@@ -421,33 +497,42 @@ if view_mode == "Creator Studio":
                             else:
                                 page_text = page.get_text()
                                 if page_text.strip():
-                                    gpt_output = generate_card_from_text(
-                                        page_text,
-                                        file_name,
-                                        page_number=page_num_human
-                                    )
-                                    
+                                    gpt_output = generate_card_from_text(page_text, file_name, page_number=page_num_human)
                                     try:
                                         flashcard = json.loads(gpt_output)
                                         if "priority" not in flashcard:
-                                            flashcard["priority"] = 2  # default value
+                                            flashcard["priority"] = 2
                                         new_flashcards.append(flashcard)
                                     except json.JSONDecodeError as e:
                                         st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
                                         st.code(gpt_output, language="json")
                             
-                            progress_value = (page_num + 1) / doc.page_count
-                            progress_bar.progress(progress_value)
+                            progress_bar.progress((page_num + 1) / doc.page_count)
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    # Merge existing flashcards with the new ones
+                    # Merge existing flashcards with new ones.
                     merged_flashcards.extend(new_flashcards)
                     
+                    # (Optionally update flashcards in your backend)
                     update_flashcards(selected_fach, merged_flashcards)
                     
                     st.success(f"{len(new_flashcards)} neue Lernkarten wurden erstellt und hinzugefügt!")
-                    st.rerun()
+                    
+                    # --- New: APKG generation ---
+                    # Let the user enter a deck name.
+                    deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=selected_fach, key="anki_deck_name")
+                    if deck_name:
+                        # Generate the APKG file using our helper function.
+                        apkg_bytes = generate_anki_package(deck_name, merged_flashcards)
+                        st.download_button(
+                            label="Download Anki Deck (.apkg)",
+                            data=apkg_bytes,
+                            file_name=f"{deck_name}_flashcards.apkg",
+                            mime="application/octet-stream"
+                        )
+                    # Remove st.rerun() or adjust it so the APKG download remains visible.
+                    # st.rerun()
 
             # Create mindmap button
             mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
@@ -459,47 +544,45 @@ if view_mode == "Creator Studio":
                         import io
                         from pathlib import Path
                         
-                        # Create an in-memory stream from the PDF bytes
                         pdf_stream = io.BytesIO(pdf_bytes)
-                        
-                        # Use the in-memory stream to extract content
                         content = extract_content_from_pdf(
                             pdf_stream, 
                             image_pages=st.session_state.image_recognition_pages.get(file_name, []),
                             excluded_pages=st.session_state.excluded_pages.get(file_name, [])
                         )
                         full_text = content["text"]
-                        
-                        # Generate mindmap JSON and parse it
                         mindmap_json = generate_mindmap_from_text(full_text, file_name)
                         mindmap_data = json.loads(mindmap_json)
                         
-                        # Create a network visualization using pyvis
                         from pyvis.network import Network
                         net = Network(height="600px", width="100%", directed=True, notebook=False)
-                        
                         for node in mindmap_data["nodes"]:
                             net.add_node(node, label=node)
                         for edge in mindmap_data["edges"]:
                             net.add_edge(edge[0], edge[1])
                         
-                        # Generate the mindmap HTML as a string
                         mindmap_html = net.generate_html()
                         
-                        # Use the original file name (PDF) to create the mindmap filename.
-                        document_title = Path(file_name).stem  # e.g., "Praktikumszeugnis (Deutsch)"
+                        document_title = Path(file_name).stem
                         mindmap_filename = f"{document_title}_mindmap.html"
-                        
-                        # Upload the mindmap HTML to Supabase.
-                        # Note: Encode the HTML content to bytes.
                         supabase.storage.from_(bucket_name).upload(
                             f"{selected_fach}/mindmaps/{mindmap_filename}", 
                             mindmap_html.encode("utf-8")
                         )
                         
-                        st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert! Sie kann im Learning Studio angesehen werden.")
+                        st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert!")
+                        
+                        # Add or update a flashcard for the mindmap.
+                        mindmap_flashcard = {
+                            "question": f"Mindmap für {file_name}",
+                            "answer": mindmap_html,
+                            "mindmap": True
+                        }
+                        merged_flashcards.append(mindmap_flashcard)
+                        update_flashcards(selected_fach, merged_flashcards)
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+
                         
 
 elif view_mode == "Learning Studio":
