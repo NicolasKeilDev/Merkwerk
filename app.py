@@ -75,7 +75,7 @@ st.title("Merkwerk")
 
 # Initialize the view mode in session state if it doesn't exist
 if 'view_mode' not in st.session_state:
-    st.session_state.view_mode = 'Learning Studio'
+    st.session_state.view_mode = 'Creator Studio'
 
 # Create columns for the buttons
 col1, col2 = st.columns(2)
@@ -521,18 +521,21 @@ if view_mode == "Creator Studio":
                     
                     # --- New: APKG generation ---
                     # Let the user enter a deck name.
-                    deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=selected_fach, key="anki_deck_name")
-                    if deck_name:
-                        # Generate the APKG file using our helper function.
-                        apkg_bytes = generate_anki_package(deck_name, merged_flashcards)
+                    deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", key="anki_deck_name")
+                    if "deck_name" not in st.session_state:
+                        st.session_state.deck_name = ""
+
+                    st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=st.session_state.deck_name)
+
+                    if st.session_state.deck_name:
+                        apkg_bytes = generate_anki_package(st.session_state.deck_name, merged_flashcards)
                         st.download_button(
                             label="Download Anki Deck (.apkg)",
                             data=apkg_bytes,
-                            file_name=f"{deck_name}_flashcards.apkg",
+                            file_name=f"{st.session_state.deck_name}_flashcards.apkg",
                             mime="application/octet-stream"
                         )
-                    # Remove st.rerun() or adjust it so the APKG download remains visible.
-                    # st.rerun()
+
 
             # Create mindmap button
             mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
@@ -578,8 +581,11 @@ if view_mode == "Creator Studio":
                             "answer": mindmap_html,
                             "mindmap": True
                         }
-                        merged_flashcards.append(mindmap_flashcard)
-                        update_flashcards(selected_fach, merged_flashcards)
+                        # Retrieve the current flashcards (or initialize an empty list if none exist)
+                        current_flashcards = get_flashcards(selected_fach) or []
+                        current_flashcards.append(mindmap_flashcard)
+                        update_flashcards(selected_fach, current_flashcards)
+
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
 
