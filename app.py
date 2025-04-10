@@ -199,7 +199,8 @@ body { font-family: sans-serif; }
                 f.write(answer_text)  # answer_text here is the mindmap HTML.
             media_files.append(mindmap_filename)
             # Use an absolute URI so that Anki finds the file in its media folder.
-            answer_text = f"Mindmap verfügbar: <a href='anki://_media/{mindmap_filename}' target='_blank'>Öffne Mindmap</a>"
+            answer_text = f"<iframe src='{mindmap_filename}' width='100%' height='600px' frameborder='0'></iframe>"
+
         
         note = genanki.Note(
             model=my_model,

@@ -12,8 +12,10 @@ client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 def generate_card_from_text(text, upload_name, page_number):
     prompt = f"""
     Erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil aus dem folgenden Textauszug.
-    Die Antwort sollte eine Liste von Aufzählungspunkten sein. Erkläre alle Fachbegriffe und alle Themenbezogene Begriffe immer. 
-    Schreibe in einfacher und simpler Sprache. Inkludiere alle Fachbegriffe auf der Seite auch in der Karteikarte.
+    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten verfasst sein – **ohne** jegliche Aufzählungszeichen (wie "-", "*", etc.).
+    Verwende dabei ausschließlich einfache und verständliche Sprache.
+    Erkläre alle Fachbegriffe und themenbezogene Begriffe jeweils in einfachen Worten.
+    Inkludiere alle auf der Seite vorkommenden Fachbegriffe in der Karteikarte.
     Dokument: {upload_name}
     
     Text:
@@ -24,8 +26,8 @@ def generate_card_from_text(text, upload_name, page_number):
       "upload": "{upload_name}",
       "question": "...",
       "answer": [
-        "Aufzählungspunkt 1",
-        "Aufzählungspunkt 2"
+        "Stichpunkt 1",
+        "Stichpunkt 2"
       ],
       "page": {page_number}
     }}
@@ -50,7 +52,6 @@ def generate_card_from_text(text, upload_name, page_number):
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
-                # Validate this extracted portion
                 json.loads(potential_json)  # Will raise exception if still invalid
                 return potential_json
             else:
@@ -58,8 +59,7 @@ def generate_card_from_text(text, upload_name, page_number):
                 fallback_json = {
                     "upload": upload_name,
                     "question": f"Content from page {page_number} (Error: API returned invalid JSON)",
-                    "answer": ["The API response couldn't be parsed properly.", 
-                              f"Please check page {page_number} directly."],
+                    "answer": ["The API response couldn't be parsed properly.", f"Please check page {page_number} directly."],
                     "page": page_number
                 }
                 return json.dumps(fallback_json)
@@ -68,29 +68,27 @@ def generate_card_from_text(text, upload_name, page_number):
         error_json = {
             "upload": upload_name,
             "question": f"Error processing page {page_number}",
-            "answer": [f"An error occurred: {str(e)}", 
-                      "Please try regenerating this card or check the text input."],
+            "answer": [f"An error occurred: {str(e)}", "Please try regenerating this card or check the text input."],
             "page": page_number
         }
         return json.dumps(error_json)
-
-# Assuming your client is already initialized globally in this module
 def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
     """
     Uses a base64 image (as generated from PDF) to query GPT for flashcard content.
     """
     prompt = f"""
     Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
-    Die Antwort sollte aus einer Liste von Stichpunkten bestehen, die die wichtigsten sichtbaren Informationen zusammenfassen.
-    Erkläre alle Fachbegriffe und alle Themenbezogene Begriffe immer.
-    Inkludiere alle Fachbegriffe auf der Seite auch in der Karteikarte.
+    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten formuliert sein – **ohne** jegliche Aufzählungszeichen oder zusätzliche Symbole.
+    Verwende dabei einfache und leicht verständliche Sprache.
+    Erkläre alle Fachbegriffe und themenbezogene Begriffe immer in einfachen Worten.
+    Inkludiere alle auf der Seite vorkommenden Fachbegriffe in der Karteikarte.
     Dokument: {upload_name}
 
-    Erstelle eine präzise, aber umfassende Frage, die das Hauptthema der Folie abdeckt.
+    Erstelle eine präzise, aber umfassende Frage, die das Hauptthema des Bildes abdeckt.
     Die Antwort-Stichpunkte sollten:
-    - Klar und prägnant sein
-    - Die wichtigsten Konzepte und Details enthalten
-    - In logischer Reihenfolge angeordnet sein
+    - Klar und prägnant sein,
+    - Die wichtigsten Konzepte und Details enthalten,
+    - In logischer Reihenfolge angeordnet sein.
     
     Format:
     {{
@@ -124,6 +122,7 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
             json.loads(content)  # Validate JSON
             return content
         except json.JSONDecodeError:
+            import re
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
@@ -133,8 +132,7 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
                 fallback_json = {
                     "upload": upload_name,
                     "question": f"Content from image on page {page_number} (Error: API returned invalid JSON)",
-                    "answer": ["The API response couldn't be parsed properly.", 
-                               f"Please check the image on page {page_number} directly."],
+                    "answer": ["The API response couldn't be parsed properly.", f"Please check the image on page {page_number} directly."],
                     "page": page_number
                 }
                 return json.dumps(fallback_json)
@@ -146,6 +144,8 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
             "page": page_number
         }
         return json.dumps(error_json)
+
+
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
     Erstelle eine Mindmap aus dem folgenden Text. Das zentrale Thema heißt "{document_name}".
