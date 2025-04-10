@@ -452,21 +452,20 @@ if view_mode == "Creator Studio":
 
 
 
-            # Create flashcards button (below multiselect in the same column)
-            create_flashcards = st.button("Lernkarten erstellen", key="create_flashcards", use_container_width=True, icon=":material/article:") # Use container width for blocky look
+            # Combined flashcard and mindmap creation (replace the separate create_flashcards and mindmap_btn blocks)
 
-            # Process flashcard creation
-            # ... within your "if create_flashcards:" block
+            # Let the user enter a deck name if not already provided.
+            if "deck_name" not in st.session_state:
+                st.session_state.deck_name = ""
+            st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=st.session_state.deck_name, key="anki_deck_name")
 
-            if create_flashcards:
+            if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
                 st.session_state.image_recognition_pages[file_name] = temp_selected_pages
-                with st.spinner("GPT erstellt Lernkarten..."):
-                    # Retrieve existing flashcards (if any)
-                    existing_flashcards = get_flashcards(selected_fach)
-                    
-                    # Remove flashcards for the re-processed document, if needed
+                with st.spinner("Erstelle Lernkarten und Mindmap..."):
+                    # ---------- Step 1: Generate Flashcards ----------
+                    existing_flashcards = get_flashcards(selected_fach) or []
+                    # Filter out flashcards coming from the currently processed document if needed
                     merged_flashcards = [card for card in existing_flashcards if card.get("upload", "Unbekannt") != file_name]
-                    
                     new_flashcards = []
                     progress_bar = st.progress(0)
                     
@@ -478,17 +477,15 @@ if view_mode == "Creator Studio":
                             continue
                         
                         try:
+                            # For pages flagged for image recognition:
                             if page_num_human in st.session_state.image_recognition_pages.get(file_name, []):
                                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                                 base64_image = base64.b64encode(pix.tobytes()).decode('utf-8')
-                                
                                 gpt_output = analyze_image_for_flashcard_base64(base64_image, file_name, page_number=page_num_human)
-                                
                                 try:
                                     flashcard = json.loads(gpt_output)
                                     if "priority" not in flashcard:
                                         flashcard["priority"] = 2
-                                    # Save image in a new field (you can later copy it to image_base64)
                                     flashcard["image_base64"] = base64_image  
                                     new_flashcards.append(flashcard)
                                 except json.JSONDecodeError as e:
@@ -506,47 +503,18 @@ if view_mode == "Creator Studio":
                                     except json.JSONDecodeError as e:
                                         st.error(f"Fehler beim Parsen der JSON-Antwort für Text auf Seite {page_num_human}: {str(e)}")
                                         st.code(gpt_output, language="json")
-                            
+                                        
                             progress_bar.progress((page_num + 1) / doc.page_count)
                         except Exception as e:
                             st.error(f"Fehler bei Seite {page_num_human}: {str(e)}")
                     
-                    # Merge existing flashcards with new ones.
+                    # Merge the new flashcards with existing ones.
                     merged_flashcards.extend(new_flashcards)
                     
-                    # (Optionally update flashcards in your backend)
-                    update_flashcards(selected_fach, merged_flashcards)
-                    
-                    st.success(f"{len(new_flashcards)} neue Lernkarten wurden erstellt und hinzugefügt!")
-                    
-                    # --- New: APKG generation ---
-                    # Let the user enter a deck name.
-                    deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", key="anki_deck_name")
-                    if "deck_name" not in st.session_state:
-                        st.session_state.deck_name = ""
-
-                    st.session_state.deck_name = st.text_input("Bitte geben Sie den Namen des Anki-Decks ein:", value=st.session_state.deck_name)
-
-                    if st.session_state.deck_name:
-                        apkg_bytes = generate_anki_package(st.session_state.deck_name, merged_flashcards)
-                        st.download_button(
-                            label="Download Anki Deck (.apkg)",
-                            data=apkg_bytes,
-                            file_name=f"{st.session_state.deck_name}_flashcards.apkg",
-                            mime="application/octet-stream"
-                        )
-
-
-            # Create mindmap button
-            mindmap_btn = st.button("Mindmap erstellen", key="create_mindmap", use_container_width=True, icon=":material/hub:")
-
-            # Process mindmap creation
-            if mindmap_btn:
-                with st.spinner("GPT erstellt Mindmap..."):
+                    # ---------- Step 2: Generate the Mindmap ----------
                     try:
                         import io
                         from pathlib import Path
-                        
                         pdf_stream = io.BytesIO(pdf_bytes)
                         content = extract_content_from_pdf(
                             pdf_stream, 
@@ -566,28 +534,40 @@ if view_mode == "Creator Studio":
                         
                         mindmap_html = net.generate_html()
                         
+                        # Optionally, upload the mindmap HTML to Supabase.
                         document_title = Path(file_name).stem
                         mindmap_filename = f"{document_title}_mindmap.html"
                         supabase.storage.from_(bucket_name).upload(
                             f"{selected_fach}/mindmaps/{mindmap_filename}", 
                             mindmap_html.encode("utf-8")
                         )
+                        st.success("✅ Mindmap wurde erstellt und hochgeladen!")
                         
-                        st.success("✅ Mindmap wurde erstellt und in Supabase gespeichert!")
-                        
-                        # Add or update a flashcard for the mindmap.
+                        # ---------- Step 3: Create a Mindmap Flashcard ----------
                         mindmap_flashcard = {
                             "question": f"Mindmap für {file_name}",
-                            "answer": mindmap_html,
+                            "answer": f"Mindmap verfügbar: <a href='{mindmap_filename}'>Öffne Mindmap</a>",
                             "mindmap": True
                         }
-                        # Retrieve the current flashcards (or initialize an empty list if none exist)
-                        current_flashcards = get_flashcards(selected_fach) or []
-                        current_flashcards.append(mindmap_flashcard)
-                        update_flashcards(selected_fach, current_flashcards)
-
+                        merged_flashcards.append(mindmap_flashcard)
+                        
+                        # Optionally update flashcards in your backend:
+                        update_flashcards(selected_fach, merged_flashcards)
                     except Exception as e:
                         st.error(f"❌ Fehler beim Erstellen der Mindmap: {str(e)}")
+                    
+                    # ---------- Step 4: Generate the APKG File ----------
+                    if st.session_state.deck_name:
+                        apkg_bytes = generate_anki_package(st.session_state.deck_name, merged_flashcards)
+                        st.download_button(
+                            label="Download Anki Deck (.apkg)",
+                            data=apkg_bytes,
+                            file_name=f"{st.session_state.deck_name}_flashcards.apkg",
+                            mime="application/octet-stream"
+                        )
+                    else:
+                        st.warning("Bitte geben Sie einen Namen für das Anki-Deck ein!")
+
 
                         
 
