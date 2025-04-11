@@ -423,19 +423,20 @@ if view_mode == "Creator Studio":
             page_count = doc.page_count
 
 
-            # Store excluded pages in session state if not already there
+            # Ensure the excluded_pages dictionary is initialized
             if 'excluded_pages' not in st.session_state:
                 st.session_state.excluded_pages = {}
 
-            # Multi-select for pages to exclude completely
-            excluded_pages = st.multiselect(
+            # Use a local variable (without a key) to capture the selection
+            temp_excluded_pages = st.multiselect(
                 "Seiten komplett ausschließen (werden nicht in Lernkarten oder Mindmap verwendet):",
                 options=list(range(1, page_count + 1)),
-                default=st.session_state.excluded_pages.get(file_name, []),
-                key=f"exclude_select_{file_name}"
+                default=st.session_state.excluded_pages.get(file_name, [])
             )
-            # Save the exclusion selection in session state
-            st.session_state.excluded_pages[file_name] = excluded_pages
+
+            # Now update the session state with the latest selection
+            st.session_state.excluded_pages[file_name] = temp_excluded_pages
+
 
             # Capture the multiselect value in a local variable (do not set a key to avoid auto-updating session state)
             temp_selected_pages = st.multiselect(
