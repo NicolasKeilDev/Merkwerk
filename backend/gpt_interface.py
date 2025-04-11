@@ -7,6 +7,33 @@ from openai import OpenAI
 # Initialize the OpenAI client with the API key from st.secrets
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
+import time
+
+def openai_chat_with_retry(model, messages, retries=5, initial_delay=0.5, **kwargs):
+    """
+    Makes an OpenAI chat completion call with retry logic if a rate limit error occurs.
+    """
+    for attempt in range(retries):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                **kwargs
+            )
+            return response
+        except Exception as e:
+            # Check if error indicates a rate limit being hit
+            if "rate_limit_exceeded" in str(e):
+                wait_time = initial_delay * (2 ** attempt)
+                st.warning(f"Rate limit reached. Retrying in {wait_time:.2f} seconds...")
+                time.sleep(wait_time)
+            else:
+                # For other errors, don't retry.
+                raise e
+    raise Exception("Max retries exceeded for API call.")
+
+
+
 def generate_card_from_text(text, upload_name, page_number):
     prompt = f"""
     Erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil aus dem folgenden Textauszug.
@@ -72,39 +99,14 @@ def generate_card_from_text(text, upload_name, page_number):
         return json.dumps(error_json)
 
 def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
-    """
-    Uses a base64 image (as generated from PDF) to query GPT for flashcard content.
-    """
     prompt = f"""
     Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
-    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten formuliert sein.
-    Jeder Stichpunkt soll mit dem Bullet "•" beginnen und als Halbsatz formuliert sein.
-    Verwende dabei einfache und leicht verständliche Sprache.
-    Erkläre alle Fachbegriffe und themenbezogene Begriffe immer in einfachen Worten.
-    Inkludiere alle auf der Seite vorkommenden Fachbegriffe in der Karteikarte.
-    Dokument: {upload_name}
-    
-    Erstelle eine präzise, aber umfassende Frage, die das Hauptthema des Bildes abdeckt.
-    Die Antwort-Stichpunkte sollten:
-    - Klar und prägnant sein,
-    - Die wichtigsten Konzepte und Details enthalten,
-    - In logischer Reihenfolge angeordnet sein.
-    
-    Format:
-    {{
-      "upload": "{upload_name}",
-      "question": "...",
-      "answer": [
-        "• Stichpunkt 1",
-        "• Stichpunkt 2"
-      ],
-      "page": {page_number}
-    }}
-    
+    ...
     WICHTIG: Deine gesamte Antwort muss ausschließlich aus validem JSON bestehen, ohne zusätzlichen Text, Kommentare oder Erklärungen.
     """
     try:
-        response = client.chat.completions.create(
+        # Use the helper function with retry logic
+        response = openai_chat_with_retry(
             model="gpt-4o-mini",
             messages=[{
                 "role": "user",
@@ -117,11 +119,11 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
             max_tokens=800
         )
         content = response.choices[0].message.content
-        
         try:
             json.loads(content)  # Validate JSON
             return content
         except json.JSONDecodeError:
+            # Attempt to extract JSON
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
