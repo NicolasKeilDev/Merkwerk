@@ -1,5 +1,3 @@
-# backend/gpt_interface.py
-
 import json
 import streamlit as st
 import re
@@ -12,7 +10,8 @@ client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 def generate_card_from_text(text, upload_name, page_number):
     prompt = f"""
     Erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil aus dem folgenden Textauszug.
-    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten verfasst sein – **ohne** jegliche Aufzählungszeichen (wie "-", "*", etc.).
+    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten verfasst sein.
+    Jeder Stichpunkt soll mit dem Bullet "•" beginnen und als Halbsatz formuliert sein.
     Verwende dabei ausschließlich einfache und verständliche Sprache.
     Erkläre alle Fachbegriffe und themenbezogene Begriffe jeweils in einfachen Worten.
     Inkludiere alle auf der Seite vorkommenden Fachbegriffe in der Karteikarte.
@@ -26,8 +25,8 @@ def generate_card_from_text(text, upload_name, page_number):
       "upload": "{upload_name}",
       "question": "...",
       "answer": [
-        "- Stichpunkt 1",
-        "- Stichpunkt 2"
+        "• Stichpunkt 1",
+        "• Stichpunkt 2"
       ],
       "page": {page_number}
     }}
@@ -48,14 +47,13 @@ def generate_card_from_text(text, upload_name, page_number):
             return content
         except json.JSONDecodeError:
             # If we still get invalid JSON, try to extract just the JSON part
-            import re
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
                 json.loads(potential_json)  # Will raise exception if still invalid
                 return potential_json
             else:
-                # If no valid JSON found, create a basic valid JSON response
+                # Fallback JSON response
                 fallback_json = {
                     "upload": upload_name,
                     "question": f"Content from page {page_number} (Error: API returned invalid JSON)",
@@ -64,7 +62,7 @@ def generate_card_from_text(text, upload_name, page_number):
                 }
                 return json.dumps(fallback_json)
     except Exception as e:
-        # Create a valid JSON error response instead of raising an exception
+        # Return an error response in valid JSON format
         error_json = {
             "upload": upload_name,
             "question": f"Error processing page {page_number}",
@@ -72,18 +70,20 @@ def generate_card_from_text(text, upload_name, page_number):
             "page": page_number
         }
         return json.dumps(error_json)
+
 def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
     """
     Uses a base64 image (as generated from PDF) to query GPT for flashcard content.
     """
     prompt = f"""
     Analysiere dieses Folienbild und erstelle eine Lernkarte im JSON-Format im Frage-Antwort-Stil.
-    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten formuliert sein – **ohne** jegliche Aufzählungszeichen oder zusätzliche Symbole.
+    Die Antwort sollte als Liste von kurzen, prägnanten Stichpunkten formuliert sein.
+    Jeder Stichpunkt soll mit dem Bullet "•" beginnen und als Halbsatz formuliert sein.
     Verwende dabei einfache und leicht verständliche Sprache.
     Erkläre alle Fachbegriffe und themenbezogene Begriffe immer in einfachen Worten.
     Inkludiere alle auf der Seite vorkommenden Fachbegriffe in der Karteikarte.
     Dokument: {upload_name}
-
+    
     Erstelle eine präzise, aber umfassende Frage, die das Hauptthema des Bildes abdeckt.
     Die Antwort-Stichpunkte sollten:
     - Klar und prägnant sein,
@@ -95,8 +95,8 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
       "upload": "{upload_name}",
       "question": "...",
       "answer": [
-        "- Stichpunkt 1",
-        "- Stichpunkt 2"
+        "• Stichpunkt 1",
+        "• Stichpunkt 2"
       ],
       "page": {page_number}
     }}
@@ -122,11 +122,10 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
             json.loads(content)  # Validate JSON
             return content
         except json.JSONDecodeError:
-            import re
             json_match = re.search(r'(\{.*\})', content, re.DOTALL)
             if json_match:
                 potential_json = json_match.group(1)
-                json.loads(potential_json)  # Validate again
+                json.loads(potential_json)
                 return potential_json
             else:
                 fallback_json = {
@@ -144,7 +143,6 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
             "page": page_number
         }
         return json.dumps(error_json)
-
 
 def generate_mindmap_from_text(full_text, document_name):
     prompt = f"""
@@ -169,6 +167,5 @@ def generate_mindmap_from_text(full_text, document_name):
             messages=[{"role": "user", "content": prompt}]
         )
     except Exception as e:
-        # Consider logging the error details here for debugging purposes
         raise Exception(f"Error generating mindmap from text: {e}")
     return response.choices[0].message.content
