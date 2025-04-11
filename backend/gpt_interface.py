@@ -26,8 +26,8 @@ def generate_card_from_text(text, upload_name, page_number):
       "upload": "{upload_name}",
       "question": "...",
       "answer": [
-        "Stichpunkt 1",
-        "Stichpunkt 2"
+        "- Stichpunkt 1",
+        "- Stichpunkt 2"
       ],
       "page": {page_number}
     }}
@@ -95,8 +95,8 @@ def analyze_image_for_flashcard_base64(base64_image, upload_name, page_number):
       "upload": "{upload_name}",
       "question": "...",
       "answer": [
-        "Stichpunkt 1",
-        "Stichpunkt 2"
+        "- Stichpunkt 1",
+        "- Stichpunkt 2"
       ],
       "page": {page_number}
     }}

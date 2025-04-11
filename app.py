@@ -156,11 +156,12 @@ def generate_anki_package(deck_name, flashcards):
     """
     Generate an Anki package (.apkg) from flashcards.
     For flashcards with an 'image_base64', the image is saved and embedded.
-    For flashcards with 'mindmap': True, the HTML is saved as a media file and a link is added.
+    For flashcards with 'mindmap': True, the HTML is saved as a media file and is
+    embedded directly into the card using a relative reference.
     """
     # Minimal Anki model with no extra cosmetic design.
     my_model = genanki.Model(
-        1607392319,  # Unique model ID – change if necessary to avoid collisions.
+        1607392319,  # Unique model ID; change if necessary to avoid collisions.
         'Minimal Model',
         fields=[{'name': 'Question'}, {'name': 'Answer'}],
         templates=[{
@@ -175,39 +176,42 @@ body { font-family: sans-serif; }
     )
     
     deck = genanki.Deck(random.randint(1000000, 9999999), deck_name)
-    media_files = []  # Will hold filenames of images and mindmap HTML.
+    media_files = []  # Holds filenames for images and HTML files
     
     for idx, card in enumerate(flashcards):
         question = card.get("question", "")
         answer_raw = card.get("answer", "")
-        if isinstance(answer_raw, list):
-            answer_text = "<br>".join(answer_raw)
-        else:
-            answer_text = answer_raw
+        # Join answer parts if it's a list.
+        answer_text = "<br>".join(answer_raw) if isinstance(answer_raw, list) else answer_raw
         
-        # If the card has a base64 image, write it to a file.
+        # Process image flashcards.
         if "image_base64" in card:
             image_filename = f"flashcard_{idx}_image.png"
             save_image_from_base64(card["image_base64"], image_filename)
             media_files.append(image_filename)
             answer_text += f"<br><img src='{image_filename}' />"
         
-        # For mindmap flashcards, save the HTML as a media file and add a hyperlink.
+        # Process mindmap flashcards: Save the HTML file and embed it using an iframe.
         if card.get("mindmap", False):
             mindmap_filename = f"mindmap_{idx}.html"
+            # Save the mindmap HTML to a file.
             with open(mindmap_filename, "w", encoding="utf-8") as f:
-                f.write(answer_text)  # answer_text here is the mindmap HTML.
+                f.write(answer_text)  # 'answer_text' here is the mindmap HTML.
             media_files.append(mindmap_filename)
-            # Use an absolute URI so that Anki finds the file in its media folder.
-            answer_text = f"<iframe src='{mindmap_filename}' width='100%' height='600px' frameborder='0'></iframe>"
-
+            # Embed the mindmap directly using an <iframe> with a relative reference.
+            answer_text = (
+                f"<iframe src='_media/{mindmap_filename}' width='100%' height='600px' "
+                f"frameborder='0'></iframe>"
+            )
         
+        # Create the Anki note.
         note = genanki.Note(
             model=my_model,
             fields=[question, answer_text]
         )
         deck.add_note(note)
     
+    # Generate the package file.
     package = genanki.Package(deck, media_files=media_files)
     with tempfile.NamedTemporaryFile(suffix=".apkg", delete=False) as tmp:
         package.write_to_file(tmp.name)
