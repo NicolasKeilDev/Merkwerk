@@ -194,16 +194,14 @@ body { font-family: sans-serif; }
         # Process mindmap flashcards: Save the HTML file and embed it using an iframe.
         if card.get("mindmap", False):
             mindmap_filename = f"mindmap_{idx}.html"
-            # Save the mindmap HTML to a file.
             with open(mindmap_filename, "w", encoding="utf-8") as f:
                 f.write(answer_text)  # 'answer_text' here is the mindmap HTML.
             media_files.append(mindmap_filename)
-            # Embed the mindmap directly using an <iframe> with a relative reference.
+            # Use the plain filename without a folder prefix.
             answer_text = (
-                f"<iframe src='_media/{mindmap_filename}' width='100%' height='600px' "
-                f"frameborder='0'></iframe>"
+                f"<iframe src='{mindmap_filename}' width='100%' height='600px' frameborder='0'></iframe>"
             )
-        
+
         # Create the Anki note.
         note = genanki.Note(
             model=my_model,
