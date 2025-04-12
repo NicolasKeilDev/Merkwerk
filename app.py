@@ -490,7 +490,7 @@ if view_mode == "Creator Studio":
                                     st.code(gpt_output, language="json")
                                 finally:
                                     # Pause for 2 seconds after processing each image to prevent rate limiting.
-                                    time.sleep(2)
+                                    time.sleep(20)
 
                             else:
                                 page_text = page.get_text()
