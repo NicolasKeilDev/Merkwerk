@@ -19,6 +19,7 @@ from backend.flashcard_manager import save_flashcard, get_flashcards, update_fla
 from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
 import urllib.parse
+import time
 
 
 # --- Setup Supabase client using secrets ---
@@ -484,6 +485,10 @@ if view_mode == "Creator Studio":
                                 except json.JSONDecodeError as e:
                                     st.error(f"Fehler beim Parsen der JSON-Antwort für Bild auf Seite {page_num_human}: {str(e)}")
                                     st.code(gpt_output, language="json")
+                                finally:
+                                    # Pause for 2 seconds after processing each image to prevent rate limiting.
+                                    time.sleep(2)
+
                             else:
                                 page_text = page.get_text()
                                 if page_text.strip():
