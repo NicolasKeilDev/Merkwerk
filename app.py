@@ -428,15 +428,18 @@ if view_mode == "Creator Studio":
             if 'excluded_pages' not in st.session_state:
                 st.session_state.excluded_pages = {}
 
-            # Use a local variable (without a key) to capture the selection
+            # Multiselect for pages to be completely excluded.
+            # Using a unique key ensures that the widget preserves multiple selections on reruns.
             temp_excluded_pages = st.multiselect(
                 "Seiten komplett ausschließen (werden nicht in Lernkarten oder Mindmap verwendet):",
                 options=list(range(1, page_count + 1)),
-                default=st.session_state.excluded_pages.get(file_name, [])
+                default=st.session_state.excluded_pages.get(file_name, []),
+                key=f"excluded_pages_{file_name}"
             )
 
-            # Now update the session state with the latest selection
+            # Update session state with the latest excluded pages for the specific file.
             st.session_state.excluded_pages[file_name] = temp_excluded_pages
+
 
 
             # Capture the multiselect value in a local variable (do not set a key to avoid auto-updating session state)
