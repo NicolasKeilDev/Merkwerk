@@ -32,7 +32,6 @@ def _to_storage_safe_component(value: str) -> str:
     return value.strip("._") or "file"
 
 
-
 # --- Setup Supabase client using secrets ---
 url = st.secrets["supabase"]["url"]
 key = st.secrets["supabase"]["key"]
@@ -371,7 +370,7 @@ if view_mode == "Creator Studio":
                     supabase.storage.from_(bucket_name).upload(
                         storage_file_path,
                         bytes(uploaded_pdf.getbuffer()),
-                        {"upsert": "true"}
+                        {"upsert": "true"}  # overwrite same sanitized key on re-upload
                     )
                     st.success(f"Datei '{file_name}' wurde in Supabase gespeichert im Fach '{selected_fach}'")
                     st.session_state.uploaded_pdf = file_name
