@@ -14,13 +14,7 @@ import streamlit.components.v1 as components
 
 from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
-try:
-    import backend.gpt_interface as gpt_interface
-except Exception as import_error:
-    gpt_interface = None
-    gpt_interface_import_error = str(import_error)
-else:
-    gpt_interface_import_error = None
+from backend.gpt_interface import generate_mindmap_from_text, analyze_image_for_flashcard_base64
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
 from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
@@ -37,9 +31,6 @@ def _to_storage_safe_component(value: str) -> str:
     value = re.sub(r"[^A-Za-z0-9._-]", "_", value)
     return value.strip("._") or "file"
 
-
-generate_mindmap_from_text = getattr(gpt_interface, "generate_mindmap_from_text", None) if gpt_interface else None
-analyze_image_for_flashcard_base64 = getattr(gpt_interface, "analyze_image_for_flashcard_base64", None) if gpt_interface else None
 
 
 # --- Setup Supabase client using secrets ---
@@ -435,10 +426,6 @@ if view_mode == "Creator Studio":
             )
 
             if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
-                if analyze_image_for_flashcard_base64 is None or generate_mindmap_from_text is None:
-                    details = f" ({gpt_interface_import_error})" if gpt_interface_import_error else ""
-                    st.error(f"GPT-Funktionen konnten nicht geladen werden. Bitte prüfe backend/gpt_interface.py und den letzten Deploy.{details}")
-                    st.stop()
                 with st.spinner("Erstelle Lernkarten und Mindmap..."):
                     # ---------- Step 1: Generate New Flashcards (each page analyzed with BOTH text + image) ----------
                     new_flashcards = []
