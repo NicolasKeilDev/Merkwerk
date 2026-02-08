@@ -2,6 +2,8 @@
 import json
 import streamlit as st
 from supabase import create_client
+import re
+import unicodedata
 
 # Initialize Supabase client using secrets
 url = st.secrets["supabase"]["url"]
@@ -9,12 +11,21 @@ key = st.secrets["supabase"]["key"]
 bucket_name = st.secrets["supabase"]["bucket"]
 supabase = create_client(url, key)
 
+
+def _to_storage_safe_component(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"\s+", "_", value)
+    value = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+    return value.strip("._") or "file"
+
+
 def get_flashcards(fach_name):
     """
     Download flashcards.json from Supabase storage and return the flashcards list.
     If the file doesn't exist, return an empty list.
     """
-    file_path = f"{fach_name}/flashcards.json"
+    safe_fach = _to_storage_safe_component(fach_name)
+    file_path = f"{safe_fach}/flashcards.json"
     try:
         response = supabase.storage.from_(bucket_name).download(file_path)
         # response may be bytes or have a content attribute
@@ -32,7 +43,8 @@ def update_flashcards(fach_name, flashcards):
     Update flashcards.json in Supabase storage with the new flashcards content.
     This removes any existing file and uploads the new content.
     """
-    file_path = f"{fach_name}/flashcards.json"
+    safe_fach = _to_storage_safe_component(fach_name)
+    file_path = f"{safe_fach}/flashcards.json"
     content = json.dumps(flashcards, indent=2, ensure_ascii=False)
     try:
         # Remove the existing file if it exists (ignore error if not)
@@ -59,7 +71,9 @@ def delete_document(fach_name, document_name):
     and delete the corresponding mindmap file and images from Supabase storage.
     """
     # Delete the PDF document from uploads
-    pdf_path = f"{fach_name}/uploads/{document_name}"
+    safe_fach = _to_storage_safe_component(fach_name)
+    safe_document = _to_storage_safe_component(document_name)
+    pdf_path = f"{safe_fach}/uploads/{safe_document}"
     try:
         supabase.storage.from_(bucket_name).remove([pdf_path])
     except Exception as e:
@@ -73,7 +87,7 @@ def delete_document(fach_name, document_name):
         update_flashcards(fach_name, flashcards)
 
     # Delete the corresponding mindmap file from the mindmaps folder
-    mindmap_path = f"{fach_name}/mindmaps/{document_name.split('.')[0]}_mindmap.html"
+    mindmap_path = f"{safe_fach}/mindmaps/{safe_document.split('.')[0]}_mindmap.html"
     try:
         supabase.storage.from_(bucket_name).remove([mindmap_path])
     except Exception as e:
@@ -81,15 +95,15 @@ def delete_document(fach_name, document_name):
 
     # Delete the corresponding images from the images folder
     try:
-        images_folder = f"{fach_name}/images/"
+        images_folder = f"{safe_fach}/images/"
         # List all files in the images folder
         images_list = supabase.storage.from_(bucket_name).list(images_folder)
-        document_stem = document_name.split('.')[0]
+        document_stem = safe_document.split('.')[0]
         images_to_delete = []
         # Filter files that start with the document stem (e.g. "DocumentName_page_")
         for file in images_list:
             if file["name"].startswith(f"{document_stem}_page_"):
-                images_to_delete.append(f"{fach_name}/images/{file['name']}")
+                images_to_delete.append(f"{safe_fach}/images/{file['name']}")
         if images_to_delete:
             supabase.storage.from_(bucket_name).remove(images_to_delete)
     except Exception as e:

@@ -14,12 +14,32 @@ import streamlit.components.v1 as components
 
 from backend.fach_manager import get_all_faecher, create_fach, delete_fach
 from backend.pdf_parser import extract_text_from_pdf, extract_content_from_pdf
-from backend.gpt_interface import generate_mindmap_from_text, analyze_image_for_flashcard_base64
+try:
+    import backend.gpt_interface as gpt_interface
+except Exception as import_error:
+    gpt_interface = None
+    gpt_interface_import_error = str(import_error)
+else:
+    gpt_interface_import_error = None
 from backend.flashcard_manager import save_flashcard, get_flashcards, update_flashcards, delete_document
 from backend.storage_utils import get_image_as_data_url
 from supabase import create_client
 import urllib.parse
 import time
+import re
+import unicodedata
+
+
+def _to_storage_safe_component(value: str) -> str:
+    """Convert arbitrary names (e.g., with umlauts) to Supabase-safe key components."""
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"\s+", "_", value)
+    value = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+    return value.strip("._") or "file"
+
+
+generate_mindmap_from_text = getattr(gpt_interface, "generate_mindmap_from_text", None) if gpt_interface else None
+analyze_image_for_flashcard_base64 = getattr(gpt_interface, "analyze_image_for_flashcard_base64", None) if gpt_interface else None
 
 
 # --- Setup Supabase client using secrets ---
@@ -308,7 +328,8 @@ if view_mode == "Creator Studio":
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### Hochgeladene PDFs")
 
-        uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
+        safe_fach = _to_storage_safe_component(selected_fach)
+        uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{safe_fach}/uploads/")
         uploaded_files = [file["name"] for file in uploaded_files_resp if file["name"] != "placeholder.txt"]
 
         if uploaded_files:
@@ -323,7 +344,9 @@ if view_mode == "Creator Studio":
 
             if selected_existing_file and st.session_state.get("uploaded_pdf") != selected_existing_file:
                 st.session_state.uploaded_pdf = selected_existing_file
-                st.session_state.selected_file_path = f"supabase://{bucket_name}/{selected_fach}/uploads/{selected_existing_file}"
+                safe_fach = _to_storage_safe_component(selected_fach)
+                st.session_state.selected_file_path = f"supabase://{bucket_name}/{safe_fach}/uploads/{selected_existing_file}"
+                st.session_state.uploaded_pdf_storage_name = selected_existing_file
                 st.rerun()
 
             for f in uploaded_files:
@@ -351,13 +374,18 @@ if view_mode == "Creator Studio":
 
                 if st.session_state.get('uploaded_pdf') != uploaded_pdf.name:
                     file_name = uploaded_pdf.name
+                    safe_fach = _to_storage_safe_component(selected_fach)
+                    safe_file_name = _to_storage_safe_component(file_name)
+                    storage_file_path = f"{safe_fach}/uploads/{safe_file_name}"
                     supabase.storage.from_(bucket_name).upload(
-                        f"{selected_fach}/uploads/{file_name}",
-                        bytes(uploaded_pdf.getbuffer())
+                        storage_file_path,
+                        bytes(uploaded_pdf.getbuffer()),
+                        {"upsert": "true"}
                     )
                     st.success(f"Datei '{file_name}' wurde in Supabase gespeichert im Fach '{selected_fach}'")
                     st.session_state.uploaded_pdf = file_name
-                    st.session_state.selected_file_path = f"supabase://{bucket_name}/{selected_fach}/uploads/{file_name}"
+                    st.session_state.uploaded_pdf_storage_name = safe_file_name
+                    st.session_state.selected_file_path = f"supabase://{bucket_name}/{storage_file_path}"
                     st.rerun()
             else:
                 file_name = st.session_state.uploaded_pdf
@@ -368,7 +396,8 @@ if view_mode == "Creator Studio":
             if "uploaded_pdf" in st.session_state:
                 file_name = st.session_state.uploaded_pdf
             else:
-                uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/uploads/")
+                safe_fach = _to_storage_safe_component(selected_fach)
+                uploaded_files_resp = supabase.storage.from_(bucket_name).list(f"{safe_fach}/uploads/")
                 files = [f for f in uploaded_files_resp if f["name"] != "placeholder.txt"]
                 if files:
                     newest_file = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)[0]
@@ -377,7 +406,9 @@ if view_mode == "Creator Studio":
                     st.error("No PDF available for processing.")
                     st.stop()
 
-            download_response = supabase.storage.from_(bucket_name).download(f"{selected_fach}/uploads/{file_name}")
+            safe_fach = _to_storage_safe_component(selected_fach)
+            storage_file_name = st.session_state.get("uploaded_pdf_storage_name", file_name)
+            download_response = supabase.storage.from_(bucket_name).download(f"{safe_fach}/uploads/{storage_file_name}")
             pdf_bytes = download_response if isinstance(download_response, bytes) else download_response.content
 
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -404,6 +435,10 @@ if view_mode == "Creator Studio":
             )
 
             if st.button("Lernkarten und Mindmap erstellen", key="create_all", use_container_width=True, icon=":material/article:"):
+                if analyze_image_for_flashcard_base64 is None or generate_mindmap_from_text is None:
+                    details = f" ({gpt_interface_import_error})" if gpt_interface_import_error else ""
+                    st.error(f"GPT-Funktionen konnten nicht geladen werden. Bitte prüfe backend/gpt_interface.py und den letzten Deploy.{details}")
+                    st.stop()
                 with st.spinner("Erstelle Lernkarten und Mindmap..."):
                     # ---------- Step 1: Generate New Flashcards (each page analyzed with BOTH text + image) ----------
                     new_flashcards = []
@@ -589,7 +624,8 @@ elif view_mode == "Learning Studio":
             upload_files = sorted(list(set(card.get("upload", "Unbekannt") for card in flashcards_all)))
 
             try:
-                mindmap_files_resp = supabase.storage.from_(bucket_name).list(f"{selected_fach}/mindmaps/")
+                safe_fach = _to_storage_safe_component(selected_fach)
+                mindmap_files_resp = supabase.storage.from_(bucket_name).list(f"{safe_fach}/mindmaps/")
             except Exception:
                 mindmap_files_resp = []
 
@@ -614,7 +650,8 @@ elif view_mode == "Learning Studio":
 
                 if selected_upload:
                     mindmap_filename = f"{selected_upload.split('.')[0]}_mindmap.html"
-                    mindmap_file_path = f"{selected_fach}/mindmaps/{mindmap_filename}"
+                    safe_fach = _to_storage_safe_component(selected_fach)
+                    mindmap_file_path = f"{safe_fach}/mindmaps/{mindmap_filename}"
 
                     try:
                         download_response = supabase.storage.from_(bucket_name).download(mindmap_file_path)

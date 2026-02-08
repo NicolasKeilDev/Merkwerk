@@ -3,6 +3,15 @@ import boto3
 from botocore.client import Config
 import streamlit as st
 import base64
+import re
+import unicodedata
+
+def _to_storage_safe_component(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"\s+", "_", value)
+    value = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+    return value.strip("._") or "file"
+
 
 def create_s3_client():
     supabase_url = st.secrets["supabase"]["url"]
@@ -35,7 +44,8 @@ def fetch_image(selected_fach, image_filename):
       - The image bytes or raises an Exception if the image could not be fetched.
     """
     bucket_name = st.secrets["supabase"]["bucket"]
-    object_key = f"{selected_fach}/images/{image_filename}"
+    safe_fach = _to_storage_safe_component(selected_fach)
+    object_key = f"{safe_fach}/images/{image_filename}"
     s3 = create_s3_client()
     
     try:
