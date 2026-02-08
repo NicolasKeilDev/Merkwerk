@@ -5,11 +5,16 @@ import streamlit as st
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-# Initialize the OpenAI client with the API key from st.secrets
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # Single source of truth for the model to ensure it's used everywhere
 MODEL = "gpt-5.2-2025-12-11"
+
+
+def _get_client() -> OpenAI:
+    api_key = st.secrets.get("openai", {}).get("api_key")
+    if not api_key:
+        raise RuntimeError("Missing st.secrets['openai']['api_key']")
+    return OpenAI(api_key=api_key)
 
 
 # ----------------------------
@@ -64,6 +69,7 @@ Extrahierter Text der Seite (kann unvollständig sein, nutze zusätzlich das Bil
 """.strip()
 
     try:
+        client = _get_client()
         response = client.responses.parse(
             model=MODEL,
             input=[
@@ -132,6 +138,7 @@ Text des Dokuments:
 """.strip()
 
     try:
+        client = _get_client()
         response = client.responses.parse(
             model=MODEL,
             input=prompt,
