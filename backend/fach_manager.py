@@ -4,12 +4,21 @@ import io
 import base64
 import streamlit as st
 from supabase import create_client
+import re
+import unicodedata
 
 # --- Setup Supabase client using secrets ---
 url = st.secrets["supabase"]["url"]
 key = st.secrets["supabase"]["key"]
 bucket_name = st.secrets["supabase"]["bucket"]
 supabase = create_client(url, key)
+
+
+def _to_storage_safe_component(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"\s+", "_", value)
+    value = re.sub(r"[^A-Za-z0-9._-]", "_", value)
+    return value.strip("._") or "fach"
 
 
 def get_all_faecher():
@@ -35,16 +44,18 @@ def create_fach(name):
     """
     Creates a new fach folder with subfolders and a flashcard.js file.
     """
+    safe_name = _to_storage_safe_component(name)
+
     # Create subfolders: uploads, images, mindmaps by uploading a placeholder file
     for subfolder in ["uploads", "mindmaps"]:
-        placeholder_path = f"{name}/{subfolder}/placeholder.txt"
+        placeholder_path = f"{safe_name}/{subfolder}/placeholder.txt"
         try:
             supabase.storage.from_(bucket_name).upload(placeholder_path, "".encode("utf-8"))
         except Exception:
             pass  # Ignore if the placeholder already exists
 
     # Create flashcards.json file if it doesn't exist
-    flashcard_path = f"{name}/flashcards.json"
+    flashcard_path = f"{safe_name}/flashcards.json"
     try:
         supabase.storage.from_(bucket_name).download(flashcard_path)
     except Exception:
@@ -61,13 +72,14 @@ def delete_fach(fach_name):
     """
     try:
         # List files under the fach folder
-        files = supabase.storage.from_(bucket_name).list(fach_name, limit=1000)
+        safe_fach = _to_storage_safe_component(fach_name)
+        files = supabase.storage.from_(bucket_name).list(safe_fach, limit=1000)
     except Exception as e:
         st.error(f"Error listing files for deletion: {e}")
         return
 
     # Build full paths for deletion (e.g. "fach/uploads/filename")
-    to_delete = [f"{fach_name}/{file['name']}" for file in files]
+    to_delete = [f"{safe_fach}/{file['name']}" for file in files]
     
     # Remove files if any
     if to_delete:
@@ -82,14 +94,16 @@ def rename_fach(old_name, new_name):
     Renames a fach folder by copying all files from old_name to new_name and then deleting old files.
     """
     try:
-        files = supabase.storage.from_(bucket_name).list(old_name, limit=1000)
+        safe_old_name = _to_storage_safe_component(old_name)
+        safe_new_name = _to_storage_safe_component(new_name)
+        files = supabase.storage.from_(bucket_name).list(safe_old_name, limit=1000)
     except Exception as e:
         st.error(f"Error listing files for renaming: {e}")
         return
 
     for file in files:
-        old_path = f"{old_name}/{file['name']}"
-        new_path = f"{new_name}/{file['name']}"
+        old_path = f"{safe_old_name}/{file['name']}"
+        new_path = f"{safe_new_name}/{file['name']}"
         
         # Download file from the old path
         try:
@@ -108,7 +122,7 @@ def rename_fach(old_name, new_name):
 
     # After copying, remove the old files
     try:
-        old_files = [f"{old_name}/{file['name']}" for file in files]
+        old_files = [f"{safe_old_name}/{file['name']}" for file in files]
         if old_files:
             supabase.storage.from_(bucket_name).remove(old_files)
     except Exception as e:
